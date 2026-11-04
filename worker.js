@@ -22,6 +22,7 @@ export default {
       if (url.pathname === "/order" && request.method === "POST") return cors(await handleOrder(request, env));
       if (url.pathname === "/webhook" && request.method === "POST") return await handleWebhook(request, env);
       if (url.pathname === "/setup") return await setup(url, env);
+      if (url.pathname === "/status") return cors(json({ ok: true, open: await isOpen(env) }));
       return text("Panier de la Street : serveur en ligne ✅\n\n" + checkConfig(env));
     } catch (e) {
       if (url.pathname === "/webhook") return new Response("ok");
@@ -43,6 +44,15 @@ function checkConfig(env) {
   return rows.map(([k, ok]) => `${ok ? "✅" : "❌"} ${k}`).join("\n");
 }
 
+// ---------- Ouverture / fermeture de la boutique (/enligne et /offline) ----------
+async function isOpen(env) {
+  if (!env.RL) return true;
+  return (await env.RL.get("shop:open")) === "1";
+}
+async function setOpen(env, open) {
+  if (env.RL) await env.RL.put("shop:open", open ? "1" : "0");
+}
+
 // ---------- Installation du webhook (ouvre /setup une fois) ----------
 async function setup(url, env) {
   if (!env.BOT_TOKEN) return text("❌ Il manque BOT_TOKEN dans les variables Cloudflare.");
@@ -61,6 +71,9 @@ async function handleOrder(request, env) {
   if (!env.BOT_TOKEN || !env.ADMIN_CHAT_ID) return json({ ok: false, error: "config" }, 503);
   const body = await request.json().catch(() => null);
   if (!body) return json({ ok: false, error: "bad" }, 400);
+
+  // 0) La boutique est-elle ouverte ? (/enligne ou /offline)
+  if (!(await isOpen(env))) return json({ ok: false, error: "closed" }, 403);
 
   // 1) Le client est-il vraiment un utilisateur Telegram ? (signature vérifiée)
   const user = await verifyInitData(String(body.initData || ""), env.BOT_TOKEN);
@@ -169,10 +182,42 @@ async function onMessage(m, env) {
     return;
   }
 
+  if (isAdmin && (msg.startsWith("/enligne") || msg.startsWith("/offline"))) {
+    const open = msg.startsWith("/enligne");
+    await setOpen(env, open);
+    const custom = msg.replace(/^\/(enligne|offline)(@\w+)?\s*/, "");
+    let posted = "";
+    if (env.CHANNEL) {
+      const t = custom || (open
+        ? "🟢 Panier de la Street est EN LIGNE !\nLes commandes sont ouvertes, c'est le moment 🛒"
+        : "🔴 Panier de la Street est fermé.\nLes commandes sont fermées pour le moment. À très vite !");
+      const r = await tg(env, "sendMessage", {
+        chat_id: env.CHANNEL, text: t,
+        reply_markup: open && env.APP_LINK ? { inline_keyboard: [[{ text: "🛒 Commander", url: env.APP_LINK }]] } : undefined,
+      });
+      posted = r.ok ? "📣 Message publié dans le canal." : "⚠️ Message non publié dans le canal : " + (r.description || "");
+    }
+    await tg(env, "sendMessage", {
+      chat_id,
+      text: (open ? "🟢 Boutique ouverte : les commandes sont acceptées." : "🔴 Boutique fermée : plus aucune commande n'est acceptée.") +
+        (posted ? "\n" + posted : ""),
+    });
+    return;
+  }
+
+  if (isAdmin && msg.startsWith("/statut")) {
+    const open = await isOpen(env);
+    await tg(env, "sendMessage", { chat_id, text: open ? "🟢 La boutique est ouverte." : "🔴 La boutique est fermée." });
+    return;
+  }
+
   if (isAdmin && msg.startsWith("/aide")) {
     await tg(env, "sendMessage", {
       chat_id, parse_mode: "HTML",
       text: "👑 <b>Commandes administrateur</b>\n\n" +
+        "🟢 <b>/enligne</b>\nOuvre les commandes et l'annonce dans le canal (tu peux ajouter ton propre texte après).\n\n" +
+        "🔴 <b>/offline</b>\nFerme les commandes et l'annonce dans le canal.\n\n" +
+        "ℹ️ <b>/statut</b>\nTe dit si la boutique est ouverte ou fermée.\n\n" +
         "📣 <b>/annonce ton texte</b>\nPublie un post dans le canal avec un bouton « Commander ».\n\n" +
         "📸 Envoie une <b>photo ou une vidéo</b> avec la légende <b>/annonce ton texte</b> pour la publier avec le bouton.\n\n" +
         "🛒 Les commandes arrivent ici avec les boutons « Prête » et « Annuler », qui préviennent le client.",

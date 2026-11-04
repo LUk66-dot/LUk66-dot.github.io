@@ -7,7 +7,7 @@
   /* ====== RÉGLAGE : colle ici l'adresse de ton serveur Cloudflare, entre les guillemets ======
      Exemple : SERVER_URL: "https://panier-street.tonpseudo.workers.dev"
      Laisse vide ("") pour le mode aperçu (les commandes ne partent nulle part). */
-  window.PS_CONFIG = { SERVER_URL: "https://panier-street.luk114063.workers.dev" };
+  window.PS_CONFIG = { SERVER_URL: "" };
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <title>Panier de la Street</title>
@@ -415,6 +415,9 @@ header{padding-block:8px 8px;gap:8px}
 .refstats b{font-family:var(--display);font-weight:400;font-size:1.3rem}
 .refstats span{font-size:.76rem;color:var(--muted)}
 .tab{max-width:140px}
+.closedbar{display:grid;gap:2px;text-align:center;background:var(--danger-bg);border:1px solid var(--danger);color:var(--danger);border-radius:10px;padding:8px 10px}
+.closedbar b{font-size:.92rem}
+.closedbar span{font-size:.78rem;color:var(--ink);opacity:.85}
 </style>
 <style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
@@ -443,6 +446,7 @@ header{padding-block:8px 8px;gap:8px}
     <div class="brand">
       <h1 class="logo"><span class="dot" aria-hidden="true">🛒</span>Panier de la Street<span class="dot" aria-hidden="true">🛒</span></h1>
     </div>
+    <div class="closedbar" id="closedbar" role="status" hidden><b>🔴 Boutique fermée</b><span>Les commandes sont fermées pour le moment. Reviens plus tard !</span></div>
     <div class="contactbox">
       <p>Pour toute quantité supérieure, veuillez prendre contact directement avec nous</p>
       <div class="contacts">
@@ -579,6 +583,7 @@ function dealCard(d){
 
 function render(){
   const v = $("#view");
+  $("#closedbar").hidden = state.shopOpen !== false;
   $("#searchWrap").hidden = $("#chips").hidden = state.tab==="codes" || state.tab==="cart" || state.tab==="ref";
   if(state.tab==="cart"){ renderCart(v); return; }
   if(state.tab==="ref"){ renderRef(v); return; }
@@ -661,6 +666,8 @@ function blockInfo(){
 }
 const mmss = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
 function checkoutArea(total){
+  if(state.shopOpen === false) return `<button class="btn big" disabled>Commandes fermées</button>
+    <p class="note">La boutique est fermée pour le moment. Ton panier est gardé, tu pourras commander à la réouverture.</p>`;
   const b = blockInfo();
   if(b) return `<button class="btn big" disabled>Nouvelle commande dans <span id="cd">${mmss(b.s)}</span></button>
     <p class="note">${b.why}.</p>`;
@@ -756,6 +763,7 @@ document.addEventListener("submit", async e=>{
       const r = await fetch(SERVER_URL + "/order", {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(payload)});
       const j = await r.json().catch(()=>({}));
       if(!j.ok){
+        if(j.error==="closed"){ state.shopOpen=false; state.confirm=false; state.sending=false; render(); toast("La boutique vient de fermer"); return; }
         fail(j.error==="rate" ? `Limite atteinte. Tu pourras recommander dans ${mmss(j.wait||60)}.`
           : j.error==="auth" ? "Ta session Telegram a expiré. Ferme la boutique et rouvre-la."
           : "La commande n'a pas pu être envoyée. Réessaie dans un instant.");
@@ -779,7 +787,7 @@ document.addEventListener("submit", async e=>{
 setInterval(()=>{ const cd=document.getElementById("cd"); if(!cd) return; const b=blockInfo(); if(b) cd.textContent=mmss(b.s); else render(); }, 1000);
 
 document.addEventListener("click", e=>{
-  if(e.target.id==="checkout"){ if(blockInfo()){ render(); return; }
+  if(e.target.id==="checkout"){ if(blockInfo() || state.shopOpen===false){ render(); return; }
     // Demande au client l'autorisation de recevoir les messages du bot (suivi de commande)
     if(tg && !state.askedWrite && tg.isVersionAtLeast && tg.isVersionAtLeast("6.9")){ state.askedWrite=true; try{ tg.requestWriteAccess(()=>{}); }catch(err){} }
     state.confirm=true; haptic(); render(); return; }
@@ -943,6 +951,20 @@ document.addEventListener("click", e=>{
   if(c){ c.dataset.copytext==="code" ? copyText(myRefCode(), "Code copié") : copyText(myRefLink(), "Lien copié"); }
 });
 document.addEventListener("keydown", e=>{ if(e.key==="Enter" && e.target.id==="refcode"){ e.preventDefault(); applyRef(); } });
+
+// ===== Boutique ouverte ou fermée (/enligne et /offline sur le bot) =====
+state.shopOpen = null; // inconnu tant que le serveur n'a pas répondu ; en mode aperçu, toujours ouverte
+async function refreshShopStatus(){
+  if(!SERVER_URL) return;
+  try{
+    const j = await fetch(SERVER_URL + "/status", {cache:"no-store"}).then(r=>r.json());
+    const open = !!(j && j.open);
+    if(open !== state.shopOpen){ state.shopOpen = open; if(!open) state.confirm=false; render(); }
+  }catch(e){}
+}
+refreshShopStatus();
+setInterval(refreshShopStatus, 60000);
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) refreshShopStatus(); });
 
 renderChips(); render(); updateBadge();
 
