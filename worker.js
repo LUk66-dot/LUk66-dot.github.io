@@ -158,6 +158,17 @@ async function onMessage(m, env) {
     return;
   }
 
+  // Message transféré depuis le canal : le bot donne l'identifiant du canal
+  const fwd = (m.forward_origin && m.forward_origin.chat) || m.forward_from_chat;
+  if (isAdmin && fwd) {
+    await tg(env, "sendMessage", {
+      chat_id, parse_mode: "HTML",
+      text: `📢 Canal « ${esc(fwd.title || "")} »\nIdentifiant : <code>${fwd.id}</code>\n\n` +
+        `Mets <code>${fwd.username ? "@" + esc(fwd.username) : fwd.id}</code> dans la variable CHANNEL sur Cloudflare, puis Déployer.`,
+    });
+    return;
+  }
+
   if (isAdmin && msg.startsWith("/aide")) {
     await tg(env, "sendMessage", {
       chat_id, parse_mode: "HTML",
@@ -184,9 +195,15 @@ async function onMessage(m, env) {
       await tg(env, "sendMessage", { chat_id, text: "Écris ton texte après /annonce, par exemple :\n/annonce Nouveau drop dispo !" });
       return;
     }
+    let help = "";
+    const d = String(r.description || "");
+    if (/chat not found/i.test(d))
+      help = `Le bot ne trouve pas le canal « ${env.CHANNEL} ». Transfère-moi n'importe quel message de ton canal : je te donnerai la bonne valeur à mettre dans CHANNEL.`;
+    else if (/not enough rights|administrator|forbidden|kicked|not a member/i.test(d))
+      help = "Le bot n'a pas le droit de publier. Dans les infos du canal : Administrateurs → ton bot → active « Publier des messages ».";
     await tg(env, "sendMessage", {
       chat_id,
-      text: r.ok ? "✅ Publié dans le canal." : "❌ Publication impossible : " + (r.description || "") + "\nVérifie que le bot est administrateur du canal.",
+      text: r.ok ? "✅ Publié dans le canal." : "❌ Publication impossible.\n" + (help || "Détail : " + d),
     });
     return;
   }
