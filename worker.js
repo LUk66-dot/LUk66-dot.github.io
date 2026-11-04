@@ -8,13 +8,18 @@
 //    WEBAPP_URL     l'adresse de ta boutique : https://xxxx.github.io/...
 //    APP_LINK       le lien de ta Mini App : https://t.me/TonBot/boutique
 //    CHANNEL        ton canal, par exemple @paniedelastreet (pour /annonce)
-//  Et une liaison KV nommée RL (anti-spam).
+//  Et une liaison KV nommée RL (anti-spam, ouverture, nettoyage).
+//  Et un déclencheur Cron toutes les heures (0 * * * *) : il supprime les
+//  messages des conversations clients au bout de 24 h.
 // =====================================================================
 
 const MAX_PER_HOUR = 3;   // commandes maximum par heure et par client
 const COOLDOWN_S = 120;   // attente minimum entre deux commandes (secondes)
 
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(cleanup(env));
+  },
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") return cors(new Response(null, { status: 204 }));
@@ -134,7 +139,7 @@ async function handleOrder(request, env) {
   await addLog(env, user.id, log, now);
 
   // 5) Confirmation au client (s'il a autorisé le bot à lui écrire)
-  await tg(env, "sendMessage", {
+  await sendToCustomer(env, "sendMessage", {
     chat_id: user.id,
     text: `✅ Commande ${num} reçue, merci !\n` +
       (mode === "pickup" ? `Retrait prévu à ${hour(slot)}. On te prévient quand elle est prête.` : "On te contacte pour la livraison."),
@@ -160,6 +165,8 @@ async function onMessage(m, env) {
   const chat_id = m.chat.id;
   const msg = m.text || m.caption || "";
   const isAdmin = env.ADMIN_CHAT_ID && String(m.from.id) === String(env.ADMIN_CHAT_ID);
+  if (!isAdmin) await track(env, chat_id, m.message_id);
+  const send = isAdmin ? tg : sendToCustomer;
   const shopButton = env.WEBAPP_URL ? { inline_keyboard: [[{ text: "🛒 Ouvrir la boutique", web_app: { url: env.WEBAPP_URL } }]] } : undefined;
 
   if (msg.startsWith("/start")) {
@@ -167,7 +174,7 @@ async function onMessage(m, env) {
     if (!env.ADMIN_CHAT_ID)
       t += `\n\n🔧 <b>Réglage</b> : ton identifiant Telegram est <code>${m.from.id}</code>\nMets-le dans la variable ADMIN_CHAT_ID sur Cloudflare.`;
     if (isAdmin) t += "\n\n👑 Tu es l'administrateur. Envoie /aide pour voir ce que tu peux faire.";
-    await tg(env, "sendMessage", { chat_id, text: t, parse_mode: "HTML", reply_markup: shopButton });
+    await send(env, "sendMessage", { chat_id, text: t, parse_mode: "HTML", reply_markup: shopButton });
     return;
   }
 
@@ -191,10 +198,11 @@ async function onMessage(m, env) {
       const t = custom || (open
         ? "🟢 Panier de la Street est EN LIGNE !\nLes commandes sont ouvertes, c'est le moment 🛒"
         : "🔴 Panier de la Street est fermé.\nLes commandes sont fermées pour le moment. À très vite !");
-      const r = await tg(env, "sendMessage", {
-        chat_id: env.CHANNEL, text: t,
-        reply_markup: open && env.APP_LINK ? { inline_keyboard: [[{ text: "🛒 Commander", url: env.APP_LINK }]] } : undefined,
-      });
+      const reply_markup = open && env.APP_LINK ? { inline_keyboard: [[{ text: "🛒 Commander", url: env.APP_LINK }]] } : undefined;
+      let r;
+      if (m.photo) r = await tg(env, "sendPhoto", { chat_id: env.CHANNEL, photo: m.photo[m.photo.length - 1].file_id, caption: t, reply_markup });
+      else if (m.video) r = await tg(env, "sendVideo", { chat_id: env.CHANNEL, video: m.video.file_id, caption: t, reply_markup });
+      else r = await tg(env, "sendMessage", { chat_id: env.CHANNEL, text: t, reply_markup });
       posted = r.ok ? "📣 Message publié dans le canal." : "⚠️ Message non publié dans le canal : " + (r.description || "");
     }
     await tg(env, "sendMessage", {
@@ -202,6 +210,12 @@ async function onMessage(m, env) {
       text: (open ? "🟢 Boutique ouverte : les commandes sont acceptées." : "🔴 Boutique fermée : plus aucune commande n'est acceptée.") +
         (posted ? "\n" + posted : ""),
     });
+    return;
+  }
+
+  if (isAdmin && msg.startsWith("/nettoyer")) {
+    const n = await cleanup(env);
+    await tg(env, "sendMessage", { chat_id, text: `🧹 ${n} message(s) client de plus de 24 h supprimé(s).` });
     return;
   }
 
@@ -218,6 +232,8 @@ async function onMessage(m, env) {
         "🟢 <b>/enligne</b>\nOuvre les commandes et l'annonce dans le canal (tu peux ajouter ton propre texte après).\n\n" +
         "🔴 <b>/offline</b>\nFerme les commandes et l'annonce dans le canal.\n\n" +
         "ℹ️ <b>/statut</b>\nTe dit si la boutique est ouverte ou fermée.\n\n" +
+        "📸 Pour /enligne, /offline et /annonce, tu peux aussi envoyer une <b>photo ou une vidéo</b> avec la commande en légende.\n\n" +
+        "🧹 <b>/nettoyer</b>\nSupprime tout de suite les messages clients de plus de 24 h (c'est aussi fait automatiquement toutes les heures).\n\n" +
         "📣 <b>/annonce ton texte</b>\nPublie un post dans le canal avec un bouton « Commander ».\n\n" +
         "📸 Envoie une <b>photo ou une vidéo</b> avec la légende <b>/annonce ton texte</b> pour la publier avec le bouton.\n\n" +
         "🛒 Les commandes arrivent ici avec les boutons « Prête » et « Annuler », qui préviennent le client.",
@@ -253,7 +269,7 @@ async function onMessage(m, env) {
     return;
   }
 
-  await tg(env, "sendMessage", { chat_id, text: "Pour commander, appuie sur le bouton ci-dessous 👇", reply_markup: shopButton });
+  await send(env, "sendMessage", { chat_id, text: "Pour commander, appuie sur le bouton ci-dessous 👇", reply_markup: shopButton });
 }
 
 async function onButton(cq, env) {
@@ -275,7 +291,7 @@ async function onButton(cq, env) {
     await tg(env, "answerCallbackQuery", { callback_query_id: cq.id });
     return;
   }
-  const r = await tg(env, "sendMessage", { chat_id: customer, text: toCustomer });
+  const r = await sendToCustomer(env, "sendMessage", { chat_id: customer, text: toCustomer });
   if (cq.message) {
     await tg(env, "editMessageText", {
       chat_id: cq.message.chat.id,
@@ -285,6 +301,38 @@ async function onButton(cq, env) {
     });
   }
   await tg(env, "answerCallbackQuery", { callback_query_id: cq.id, text: label });
+}
+
+// ---------- Suppression des messages clients au bout de 24 h ----------
+const DELETE_AFTER_H = 24;
+async function sendToCustomer(env, method, body) {
+  const r = await tg(env, method, body);
+  if (r.ok && r.result && r.result.message_id) await track(env, body.chat_id, r.result.message_id);
+  return r;
+}
+async function track(env, chatId, messageId) {
+  if (!env.RL || !chatId || !messageId) return;
+  if (env.ADMIN_CHAT_ID && String(chatId) === String(env.ADMIN_CHAT_ID)) return; // jamais tes messages à toi
+  const due = String(Date.now() + DELETE_AFTER_H * 3600e3).padStart(14, "0");
+  await env.RL.put(`del:${due}:${chatId}:${messageId}`, "1", { expirationTtl: 47 * 3600 });
+}
+async function cleanup(env) {
+  if (!env.RL || !env.BOT_TOKEN) return 0;
+  const now = Date.now();
+  let cursor, done = 0;
+  for (let page = 0; page < 5; page++) {
+    const list = await env.RL.list({ prefix: "del:", cursor });
+    for (const k of list.keys) {
+      const [, due, chatId, msgId] = k.name.split(":");
+      if (Number(due) > now) return done; // les clés sont triées par date : le reste est plus récent
+      await tg(env, "deleteMessage", { chat_id: chatId, message_id: Number(msgId) });
+      await env.RL.delete(k.name);
+      done++;
+    }
+    if (list.list_complete) break;
+    cursor = list.cursor;
+  }
+  return done;
 }
 
 // ---------- Anti-spam (stocké dans KV) ----------
