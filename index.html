@@ -3,6 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+  /* ====== RÉGLAGE : colle ici l'adresse de ton serveur Cloudflare, entre les guillemets ======
+     Exemple : SERVER_URL: "https://panier-street.tonpseudo.workers.dev"
+     Laisse vide ("") pour le mode aperçu (les commandes ne partent nulle part). */
+  window.PS_CONFIG = { SERVER_URL: "" };
+</script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <title>Panier de la Street</title>
 <script>document.documentElement.setAttribute("data-style","street-neon");</script>
@@ -504,6 +510,8 @@ const CATS = ["Tout","Maison","Mode"];
 
 // ===== Intégration Telegram (active seulement une fois ouverte dans Telegram) =====
 const tg = window.Telegram && window.Telegram.WebApp;
+// Adresse du serveur des commandes : réglée tout en haut du fichier index.html (PS_CONFIG). Vide = mode aperçu.
+const SERVER_URL = ((window.PS_CONFIG && window.PS_CONFIG.SERVER_URL) || "").trim().replace(/\/+$/,"");
 if (tg) { tg.ready(); tg.expand(); try{ tg.setHeaderColor("#0d1424"); tg.setBackgroundColor("#0d1424"); }catch(e){} }
 
 const state = {tab:"deals", cat:"Tout", q:"", sort:"recent", favs:new Set(), cart:{}, ordered:false};
@@ -609,7 +617,7 @@ function renderCart(v){
     v.innerHTML = `<div class="done"><div class="check">✓</div><h2 class="sec">Commande ${L.num||""} envoyée</h2>
       <p>${L.mode==="pickup" ? "Ta commande sera prête à l'heure choisie. Présente ce numéro au retrait." : "On te contacte au numéro indiqué pour organiser la livraison."}</p>
       <div class="recap">${recap}${L.disc?`<div><span>Parrainage</span><b>−${eur(L.disc)}</b></div>`:""}<div class="rt"><span>Total</span><b>${eur(L.total||0)}</b></div></div>
-      <p class="hint">Aperçu : aucune commande réelle n'a été passée.</p>
+      ${SERVER_URL ? `<p class="hint">Tu recevras un message du bot quand ta commande sera ${L.mode==="pickup"?"prête":"en route"}.</p>` : `<p class="hint">Aperçu : aucune commande réelle n'a été passée.</p>`}
       <button class="btn" data-tab="deals">Continuer mes achats</button></div>`;
     return;
   }
@@ -707,6 +715,7 @@ function orderForm(total){
       <input id="tel" data-of="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="06 12 34 56 78" value="${o.tel.replace(/"/g,"&quot;")}">${err.tel?`<p class="err">${err.tel}</p>`:""}</div>`;
   }
   return `<form class="orderform" id="orderform" novalidate>${pick}${fields}
+    ${err.general?`<p class="err" role="alert">${err.general}</p>`:""}
     <button class="btn big" type="submit" id="confirm">Valider la commande · ${eur(total)}</button>
     <button class="link" type="button" id="cancel">Retour au panier</button></form>`;
 }
@@ -729,26 +738,51 @@ document.addEventListener("change", e=>{
   if(e.target.name==="mode"){ state.order.mode=e.target.value; state.order.err={}; render(); }
   else if(e.target.dataset && e.target.dataset.of==="slot"){ state.order.slot=e.target.value; if(state.order.err) delete state.order.err.slot; }
 });
-document.addEventListener("submit", e=>{
+document.addEventListener("submit", async e=>{
   if(e.target.id!=="orderform") return;
   e.preventDefault();
   if(state.sending || blockInfo()){ render(); return; }
   if(!validateOrder()){ render(); const f=document.querySelector(".err"); if(f) f.scrollIntoView({block:"center",behavior:"smooth"}); return; }
   state.sending=true; render();
-  setTimeout(()=>{
-    const o=state.order;
-    state.lastOrder = {num: "PS-" + String(Date.now()).slice(-5), mode:o.mode, slot:o.slot, addr:o.addr.trim(), tel:o.tel.trim(), total:state._total, disc:state._disc||0, ref:state._disc?state.refApplied:""};
+  const o=state.order;
+  const items = Object.entries(state.cart).map(([id,q])=>{ const d=DEALS.find(x=>x.id===+id); return d && {id:d.id, name:d.name, qty:q, price:priceFor(d,q)}; }).filter(Boolean);
+  const payload = {initData: (tg && tg.initData) || "", items, total:state._total, disc:state._disc||0, ref: state._disc ? state.refApplied : "",
+    mode:o.mode, slot:o.slot, addr:o.addr.trim(), tel:o.tel.trim()};
+  const fail = msg => { state.sending=false; state.order.err={general:msg}; render(); const f=document.querySelector(".err"); if(f) f.scrollIntoView({block:"center",behavior:"smooth"}); };
+  let num;
+  if(SERVER_URL){
+    if(!payload.initData){ fail("Ouvre la boutique depuis Telegram pour passer commande."); return; }
+    try{
+      const r = await fetch(SERVER_URL + "/order", {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(payload)});
+      const j = await r.json().catch(()=>({}));
+      if(!j.ok){
+        fail(j.error==="rate" ? `Limite atteinte. Tu pourras recommander dans ${mmss(j.wait||60)}.`
+          : j.error==="auth" ? "Ta session Telegram a expiré. Ferme la boutique et rouvre-la."
+          : "La commande n'a pas pu être envoyée. Réessaie dans un instant.");
+        return;
+      }
+      num = j.num;
+    }catch(err){ fail("Connexion impossible. Vérifie ta connexion internet et réessaie."); return; }
+  } else {
+    await new Promise(res=>setTimeout(res, 900));
+    num = "PS-" + String(Date.now()).slice(-5);
+  }
+  {
+    state.lastOrder = {num, mode:o.mode, slot:o.slot, addr:o.addr.trim(), tel:o.tel.trim(), total:state._total, disc:state._disc||0, ref:state._disc?state.refApplied:""};
     if(state._disc){ refSet("bpc-ref-used","1"); state.refApplied=""; }
     refSet("bpc-first-done","1");
     logOrder(); state.sending=false; state.confirm=false; state.cart={}; saveCart();
     state.order={mode:"", slot:"", addr:"", tel:"", err:{}}; state.ordered=true; haptic(); render(); window.scrollTo(0,0);
-  }, 900);
+  }
 });
 
 setInterval(()=>{ const cd=document.getElementById("cd"); if(!cd) return; const b=blockInfo(); if(b) cd.textContent=mmss(b.s); else render(); }, 1000);
 
 document.addEventListener("click", e=>{
-  if(e.target.id==="checkout"){ if(blockInfo()){ render(); return; } state.confirm=true; haptic(); render(); return; }
+  if(e.target.id==="checkout"){ if(blockInfo()){ render(); return; }
+    // Demande au client l'autorisation de recevoir les messages du bot (suivi de commande)
+    if(tg && !state.askedWrite && tg.isVersionAtLeast && tg.isVersionAtLeast("6.9")){ state.askedWrite=true; try{ tg.requestWriteAccess(()=>{}); }catch(err){} }
+    state.confirm=true; haptic(); render(); return; }
   if(e.target.id==="cancel"){ state.confirm=false; render(); return; }
   if(e.target.id==="clear"){ state.cart={}; saveCart(); render(); toast("Panier vidé"); return; }
   const t = e.target.closest("[data-video],[data-cat],[data-fav],[data-tab],[data-copy],[data-open],[data-add],[data-inc],[data-dec],[data-set],[data-toggle],[data-addcart]");
