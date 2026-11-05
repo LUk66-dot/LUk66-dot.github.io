@@ -29,7 +29,7 @@ const ADMIN_COMMANDS = [
   { command: "annonce", description: "Publier un post avec le bouton Commander" },
   { command: "programmer", description: "Programmer un post (ex : /programmer 18:30)" },
   { command: "programmes", description: "Voir et annuler les posts programmés" },
-  { command: "bienvenue", description: "Publier un message de bienvenue (6 modèles)" },
+  { command: "bienvenue", description: "Publier un message de bienvenue (3 modèles)" },
   { command: "sondage", description: "Sondage : /sondage Question | Choix 1 | Choix 2" },
   { command: "stats", description: "Abonnés, commandes et chiffre du jour" },
   { command: "commandes", description: "Liste des commandes du jour" },
@@ -45,96 +45,78 @@ const ADMIN_COMMANDS = [
 // <code>surligné</code> <tg-spoiler>caché</tg-spoiler> <blockquote>encadré</blockquote>
 // Tu peux modifier ces textes librement (garde bien les balises ouvertes ET fermées).
 const WELCOME_MESSAGES = [
-  { name: "Classique",
+  { name: "Guide complet",
     text:
 `🛒 <b>BIENVENUE CHEZ PANIER DE LA STREET</b> 🛒
 
-Ici, tu commandes en <b>quelques secondes</b>, direct depuis Telegram 📲
+Ta boutique s'ouvre <b>directement dans Telegram</b>, sans rien installer 📲
+À chaque <b>ouverture</b> 🟢, appuie sur <code>🛒 Commander</code> sous l'annonce.
 
-<b>Comment ça marche ?</b>
-<b>1️⃣</b> À chaque <b>ouverture</b> 🟢, appuie sur <code>🛒 Commander</code> sous l'annonce
-<b>2️⃣</b> Choisis tes articles et ta <b>quantité</b>
-<b>3️⃣</b> Choisis <u>retrait sur place</u> 🏪 ou <u>livraison</u> 🛵
-<b>4️⃣</b> Valide : tu reçois ta <b>confirmation</b> et un message quand c'est <b>prêt</b> ✅
+<b>🛍 DANS LA BOUTIQUE</b>
+▶️ Regarde la <b>vidéo</b> d'un produit avec le petit rond <code>▶</code>
+🔎 <b>Recherche</b> un article, trie par <b>catégorie</b> ou par <b>prix</b>
+♥ Mets tes coups de cœur en <b>favoris</b>
+🎨 Change le <b>thème</b> de l'appli avec le rond en haut à droite
+
+<b>🧺 TA COMMANDE</b>
+1️⃣ Choisis ta <b>quantité</b> puis <code>+ Ajouter</code>
+2️⃣ Dans le <b>panier</b>, choisis :
+<blockquote>🏪 <b>Retrait sur place</b> : <u>gratuit</u>, à l'heure de ton choix, avec l'itinéraire
+🛵 <b>Livraison</b> : <u>gratuite dans le 38230</u>, payante dans les autres zones</blockquote>
+3️⃣ Valide : tu reçois ta <b>confirmation</b>, puis un message quand c'est <b>prêt</b> ✅ ou <b>en route</b> 🛵
 
 💶 <b>Paiement en espèces uniquement</b>
-🟢 On annonce ici chaque <b>ouverture</b> et 🔴 chaque <b>fermeture</b>
+📦 Grosse quantité ? Contacte-nous en <b>WhatsApp</b> ou <b>Snapchat</b> (dans l'appli)
 
-<i>Active les notifications du canal pour ne rien rater</i> 🔔` },
+<b>🎁 BONUS PARRAINAGE</b>
+Crée ton compte dans l'onglet <b>👤 Compte</b> : <b>10 potes</b> qui commandent avec ton code = <u><b>1 article au choix OFFERT</b></u>
 
-  { name: "Street",
+🔔 <i>Active les notifications du canal pour ne rater aucune ouverture</i>` },
+
+  { name: "L'essentiel",
     text:
-`🔥🔥 <b>T'ES ARRIVÉ AU BON ENDROIT</b> 🔥🔥
+`🔥 <b>BIENVENUE SUR PANIER DE LA STREET</b> 🔥
 
-<b>PANIER DE LA STREET</b>, c'est <u>simple</u>, <u>rapide</u>, <u>sans prise de tête</u> 💯
+<b>Commander, c'est 30 secondes</b> ⏱
+<blockquote>🟢 On annonce l'<b>ouverture</b> ici
+🛒 Tu appuies sur <code>Commander</code>
+▶️ Tu regardes les <b>vidéos</b> des produits
+🧺 Tu choisis ta <b>quantité</b>
+🏪 <b>Retrait gratuit</b> ou 🛵 <b>livraison</b>
+✅ Le bot te prévient quand c'est <b>prêt</b></blockquote>
+💶 <b>Espèces uniquement</b>
+🎁 <b>10 potes parrainés = 1 article OFFERT</b> (onglet 👤 Compte)
 
-<blockquote>🛒 Tu choisis
-🏪 Tu récupères <b>gratuitement</b>, ou 🛵 on te livre
-💶 Tu payes en <b>espèces</b></blockquote>
-👉 Dès qu'on annonce l'<b>ouverture</b> 🟢, appuie sur <code>🛒 Commander</code> et c'est parti 🚀
-
-<b>Partage le canal à tes potes</b>, ça nous aide grave 🙏` },
+<i>Partage le canal à tes potes, ça nous aide grave</i> 🙏` },
 
   { name: "Questions / réponses",
     text:
 `👋 <b>Bienvenue sur Panier de la Street !</b>
-Tout ce qu'il faut savoir en 30 secondes 👇
+Tout ce qu'il faut savoir 👇
 
 ❓ <b>Comment je commande ?</b>
-👉 À chaque <b>ouverture</b> 🟢, appuie sur <code>🛒 Commander</code> sous l'annonce : la boutique s'ouvre <u>direct dans Telegram</u>.
+👉 À chaque <b>ouverture</b> 🟢, appuie sur <code>🛒 Commander</code> sous l'annonce : la boutique s'ouvre <u>dans Telegram</u>.
+
+❓ <b>Je peux voir les produits avant ?</b>
+👉 Oui ! Appuie sur le rond <code>▶</code> d'un article pour voir sa <b>vidéo</b> 🎬
 
 ❓ <b>Je récupère comment ?</b>
-👉 <b>Retrait sur place gratuit</b> 🏪 à l'heure que tu choisis, ou <b>livraison</b> 🛵 (gratuite dans le <b>38230</b>).
+👉 🏪 <b>Retrait sur place gratuit</b> à l'heure que tu choisis (avec l'itinéraire), ou 🛵 <b>livraison</b> : gratuite dans le <b>38230</b>, payante ailleurs.
 
 ❓ <b>Je paye comment ?</b>
-👉 <b>En espèces uniquement</b> 💶 au retrait ou à la livraison.
+👉 <b>En espèces uniquement</b> 💶
 
 ❓ <b>Je sais quand c'est prêt ?</b>
-👉 Oui ! Le bot t'envoie un <b>message</b> dès que ta commande est <b>prête</b> ✅
+👉 Le bot t'envoie un <b>message</b> dès que c'est <b>prêt</b> ✅ ou <b>en route</b> 🛵. Pense à <u>autoriser le bot</u> quand il te le demande.
+
+❓ <b>Je veux une grosse quantité ?</b>
+👉 Contacte-nous en <b>WhatsApp</b> ou <b>Snapchat</b> (contacts en haut de l'appli) 📦
+
+❓ <b>Il y a des avantages ?</b>
+👉 Crée ton compte (onglet <b>👤 Compte</b>) : <b>10 potes parrainés</b> = <u><b>1 article au choix OFFERT</b></u> 🎁
 
 ❓ <b>C'est ouvert quand ?</b>
-👉 On l'annonce <u>ici</u> : 🟢 <b>ouvert</b> / 🔴 <b>fermé</b>.` },
-
-  { name: "Express",
-    text:
-`⚡️ <b>PANIER DE LA STREET</b> ⚡️
-
-🛒 <b>Commande</b> en 3 clics
-🏪 <b>Retrait</b> gratuit
-🛵 <b>Livraison</b> dispo
-💶 <b>Espèces</b> uniquement
-🔔 <b>Notif</b> quand c'est prêt
-🎁 <b>Parrainage</b> = articles offerts
-
-🟢 <b>Guette l'ouverture</b> et appuie sur <code>🛒 Commander</code>` },
-
-  { name: "Parrainage",
-    text:
-`🎁 <b>BIENVENUE ! ICI, INVITER TES POTES, ÇA RAPPORTE</b> 🎁
-
-Commande en quelques secondes avec le bouton <code>🛒 Commander</code> à chaque <b>ouverture</b> 🟢
-<b>Retrait gratuit</b> 🏪 ou <b>livraison</b> 🛵 · paiement en <b>espèces</b> 💶
-
-<blockquote><b>💎 LE PARRAINAGE</b>
-1️⃣ Crée ton compte dans l'onglet <b>👤 Compte</b>
-2️⃣ Partage ton <b>code perso</b> à tes potes
-3️⃣ <b>10 potes</b> qui passent leur 1re commande = <u><b>1 article au choix OFFERT</b></u> 🎉</blockquote>
-<i>Et ça recommence tous les 10 parrainages</i> 😏` },
-
-  { name: "Surprise",
-    text:
-`👀 <b>Psst… nouveau ici ?</b>
-
-Bienvenue chez <b>PANIER DE LA STREET</b> 🛒✨
-
-Ce que tu vas adorer 👇 <i>(appuie pour découvrir)</i>
-🎁 <tg-spoiler>10 potes parrainés = 1 article OFFERT</tg-spoiler>
-🏪 <tg-spoiler>Le retrait sur place est GRATUIT</tg-spoiler>
-🛵 <tg-spoiler>Livraison gratuite dans le 38230</tg-spoiler>
-🔔 <tg-spoiler>Le bot te prévient quand c'est prêt</tg-spoiler>
-
-💶 Paiement en <b>espèces uniquement</b>
-🟢 <b>À la prochaine ouverture</b>, appuie sur <code>🛒 Commander</code> pour découvrir la boutique` },
+👉 On l'annonce <u>ici</u> : 🟢 <b>ouvert</b> / 🔴 <b>fermé</b>. Active les notifications 🔔` },
 ];
 
 export default {
