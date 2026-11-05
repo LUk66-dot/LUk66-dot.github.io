@@ -29,6 +29,7 @@ const ADMIN_COMMANDS = [
   { command: "sondage", description: "Sondage : /sondage Question | Choix 1 | Choix 2" },
   { command: "stats", description: "Abonnés, commandes et chiffre du jour" },
   { command: "commandes", description: "Liste des commandes du jour" },
+  { command: "status", description: "Bilan de santé du bot et de la boutique" },
   { command: "statut", description: "La boutique est-elle ouverte ?" },
   { command: "nettoyer", description: "Supprimer les vieux messages clients" },
   { command: "aide", description: "Toutes les commandes expliquées" },
@@ -39,7 +40,10 @@ export default {
     ctx.waitUntil((async () => {
       await runScheduled(env);
       const minute = new Date(event.scheduledTime || Date.now()).getUTCMinutes();
-      if (minute < 5) await cleanup(env); // une fois par heure
+      if (minute < 5) {                     // une fois par heure
+        await cleanup(env);
+        if (env.RL) await env.RL.put("cron:last", String(Date.now()));
+      }
     })());
   },
   async fetch(request, env) {
@@ -297,12 +301,12 @@ async function handleWebhook(request, env) {
   const u = await request.json().catch(() => null);
   try {
     if (u && u.callback_query) await onButton(u.callback_query, env);
-    else if (u && u.message) await onMessage(u.message, env);
+    else if (u && u.message) await onMessage(u.message, env, new URL(request.url).origin);
   } catch (e) {}
   return new Response("ok");
 }
 
-async function onMessage(m, env) {
+async function onMessage(m, env, origin) {
   if (!m.chat || m.chat.type !== "private" || !m.from) return;
   const chat_id = m.chat.id;
   const msg = m.text || m.caption || "";
@@ -504,6 +508,12 @@ async function onMessage(m, env) {
     return;
   }
 
+  if (/^\/status(@\w+)?(\s|$)/.test(msg)) {
+    await tg(env, "sendMessage", { chat_id, text: "🩺 Vérification en cours…" });
+    await tg(env, "sendMessage", { chat_id, parse_mode: "HTML", text: await healthReport(env, origin) });
+    return;
+  }
+
   if (msg.startsWith("/statut")) {
     await tg(env, "sendMessage", { chat_id, text: (await isOpen(env)) ? "🟢 La boutique est ouverte." : "🔴 La boutique est fermée." });
     return;
@@ -523,6 +533,7 @@ async function onMessage(m, env) {
         "📈 <b>/stats</b> : abonnés, commandes et chiffre du jour et de la semaine.\n" +
         "🛒 <b>/commandes</b> : la liste des commandes du jour.\n" +
         "ℹ️ <b>/statut</b> : boutique ouverte ou fermée ?\n" +
+        "🩺 <b>/status</b> : bilan complet, vérifie que le bot, le canal, la boutique et le serveur vont bien.\n" +
         "🧹 <b>/nettoyer</b> : supprime les messages clients de plus de 24 h (automatique toutes les heures).\n\n" +
         "💡 Après chaque publication : boutons 📌 Épingler et 🗑 Supprimer.\n" +
         "💬 <b>Réponds</b> à une notification de commande pour écrire directement au client.\n" +
@@ -540,6 +551,81 @@ async function askContent(env, chat_id, label, extra) {
     text: `${label}\n\n✍️ <b>Envoie maintenant ton message</b> pour le canal : un texte, ou une photo / une vidéo avec ta légende.` +
       (extra ? `\n\n${extra}` : "") + "\n❌ /annuler : ne rien faire",
   });
+}
+
+// ---------- /status : bilan de santé ----------
+async function healthReport(env, origin) {
+  const ok = [], bad = [];
+  const line = (good, text, fix) => (good ? ok : bad).push(good ? `✅ ${text}` : `❌ ${text}${fix ? "\n     → " + fix : ""}`);
+
+  // Bot
+  const me = await tg(env, "getMe", {});
+  line(me.ok, me.ok ? `Bot @${esc(me.result.username)} en ligne` : "Le bot ne répond pas", "vérifie BOT_TOKEN dans Cloudflare");
+
+  // Connexion Telegram → serveur
+  const wh = await tg(env, "getWebhookInfo", {});
+  const w = (wh.ok && wh.result) || {};
+  const hookOk = w.url === `${origin}/webhook`;
+  line(hookOk, hookOk ? "Bot branché au serveur" : "Bot mal branché au serveur", `ouvre ${origin}/setup dans ton navigateur`);
+  const recentErr = w.last_error_date && Date.now() / 1000 - w.last_error_date < 3600;
+  if (recentErr) line(false, `Erreur Telegram récente : ${esc(w.last_error_message || "")}`, "si ça se répète, ouvre /setup");
+  if (w.pending_update_count > 20) line(false, `${w.pending_update_count} messages en attente de traitement`, "le serveur a du mal à répondre");
+
+  // Canal
+  if (!env.CHANNEL) line(false, "Canal non réglé", "ajoute la variable CHANNEL");
+  else {
+    const ch = await tg(env, "getChat", { chat_id: env.CHANNEL });
+    if (!ch.ok) line(false, `Canal « ${esc(env.CHANNEL)} » introuvable`, "transfère-moi un message du canal pour avoir la bonne valeur");
+    else {
+      const mem = me.ok ? await tg(env, "getChatMember", { chat_id: env.CHANNEL, user_id: me.result.id }) : { ok: false };
+      const r = (mem.ok && mem.result) || {};
+      const admin = r.status === "administrator" || r.status === "creator";
+      line(ch.ok, `Canal « ${esc(ch.result.title || "")} » trouvé`);
+      line(admin, admin ? "Bot administrateur du canal" : "Le bot n'est pas administrateur du canal", "Infos du canal → Administrateurs → ajoute le bot");
+      if (admin) {
+        line(r.can_post_messages !== false, "Droit de publier", "active « Publier des messages » pour le bot");
+        line(r.can_edit_messages !== false, "Droit de modifier / épingler", "active « Modifier les messages » pour le bot");
+      }
+      const subs = await tg(env, "getChatMemberCount", { chat_id: env.CHANNEL });
+      if (subs.ok) ok.push(`👥 ${subs.result} abonnés`);
+    }
+  }
+
+  // Boutique (le site sur GitHub)
+  if (!env.WEBAPP_URL) line(false, "Adresse de la boutique non réglée", "ajoute la variable WEBAPP_URL");
+  else {
+    try {
+      const r = await fetch(env.WEBAPP_URL, { headers: { "cache-control": "no-cache" } });
+      const html = r.ok ? await r.text() : "";
+      line(r.ok, r.ok ? "Boutique en ligne" : `Boutique injoignable (erreur ${r.status})`, "vérifie GitHub Pages et WEBAPP_URL");
+      if (html) {
+        const m = html.match(/SERVER_URL:\s*"([^"]*)"/);
+        const srv = m ? m[1].trim().replace(/\/+$/, "") : "";
+        line(srv === origin, srv === origin ? "Boutique reliée à ce serveur" : srv ? `La boutique pointe vers un autre serveur (${esc(srv)})` : "SERVER_URL vide dans la boutique : les commandes ne partent pas",
+          `mets SERVER_URL: "${origin}" en haut d'index.html`);
+        const n = (html.match(/^\s*Produit\s*:/gim) || []).length;
+        line(n > 0, n > 0 ? `${n} produit${n > 1 ? "s" : ""} dans la boutique` : "Aucun produit trouvé dans la boutique", "vérifie tes fiches « Produit : » en haut d'index.html");
+      }
+    } catch (e) { line(false, "Boutique injoignable", "vérifie GitHub Pages et WEBAPP_URL"); }
+  }
+  if (!env.APP_LINK) line(false, "Lien de la Mini App non réglé", "ajoute la variable APP_LINK (boutons Commander, parrainage)");
+
+  // Serveur
+  if (!env.RL) line(false, "Mémoire KV non reliée", "ajoute la liaison KV « RL »");
+  else {
+    let kvOk = false;
+    try { await env.RL.put("health:ping", String(Date.now()), { expirationTtl: 60 }); kvOk = !!(await env.RL.get("health:ping")); } catch (e) {}
+    line(kvOk, "Mémoire KV opérationnelle", "vérifie la liaison KV « RL »");
+    const last = Number(await env.RL.get("cron:last")) || 0;
+    const mins = last ? Math.round((Date.now() - last) / 60000) : null;
+    line(mins !== null && mins <= 70, mins === null ? "Tâche automatique jamais exécutée" : `Tâche automatique : dernier passage il y a ${mins} min`,
+      "vérifie le déclencheur Cron (*/5 * * * *) dans Paramètres → Déclencheurs");
+  }
+  if (!env.ADMIN_CHAT_ID) line(false, "ADMIN_CHAT_ID non réglé");
+  ok.push((await isOpen(env)) ? "🟢 Commandes ouvertes" : "🔴 Commandes fermées (/enligne pour ouvrir)");
+
+  const head = bad.length ? `⚠️ <b>${bad.length} point${bad.length > 1 ? "s" : ""} à vérifier</b>` : "✅ <b>Tout est OK</b>";
+  return `🩺 <b>Bilan du bot et de la boutique</b>\n${head}\n\n` + (bad.length ? bad.join("\n") + "\n\n" : "") + ok.join("\n");
 }
 
 // ---------- Boutons ----------
