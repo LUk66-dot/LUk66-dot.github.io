@@ -21,6 +21,11 @@ const COOLDOWN_S = 120;     // attente minimum entre deux commandes (secondes)
 const DELETE_AFTER_H = 24;  // suppression des messages clients après X heures
 const TZ = "Europe/Paris";
 const REFERRAL_GOAL = 10;   // parrainages validés pour gagner 1 article offert
+// Confirmation par le client avant que la commande t'arrive : "livraison", "toutes" ou "aucune"
+// (peut aussi se régler avec la variable CONFIRM_ORDERS sur Cloudflare)
+const CONFIRM_ORDERS = "livraison";
+const CONFIRM_MINUTES = 15; // délai pour confirmer, ensuite la commande est annulée
+const confirmModes = env => { const v = String(env.CONFIRM_ORDERS || CONFIRM_ORDERS).toLowerCase(); return v === "toutes" ? ["pickup", "delivery"] : v === "aucune" ? [] : ["delivery"]; };
 
 // Menu qui s'affiche quand tu tapes « / » dans la conversation avec ton bot
 const ADMIN_COMMANDS = [
@@ -139,7 +144,7 @@ export default {
       if (url.pathname === "/instance" && request.method === "POST") return cors(await handleInstance(request, env));
       if (url.pathname === "/webhook" && request.method === "POST") return await handleWebhook(request, env);
       if (url.pathname === "/setup") return await setup(url, env);
-      if (url.pathname === "/status") return cors(json({ ok: true, open: await isOpen(env) }));
+      if (url.pathname === "/status") return cors(json({ ok: true, open: await isOpen(env), confirm: confirmModes(env) }));
       return text("Panier de la Street : serveur en ligne ✅\n\n" + checkConfig(env));
     } catch (e) {
       if (url.pathname === "/webhook") return new Response("ok");
@@ -264,18 +269,54 @@ async function handleOrder(request, env) {
   if (last && now - last < COOLDOWN_S * 1000)
     return json({ ok: false, error: "rate", wait: Math.ceil((last + COOLDOWN_S * 1000 - now) / 1000) }, 429);
 
-  // 4) Message pour toi
   const num = "PS-" + now.toString(36).slice(-5).toUpperCase();
-  const total = money(body.total);
-  const disc = money(body.disc);
-  const ref = str(body.ref, 12);
+  const o = { num, now, user: { id: user.id, first_name: user.first_name, last_name: user.last_name, username: user.username },
+    items, total: money(body.total), disc: money(body.disc), ref: str(body.ref, 12), mode, slot, addr, tel, giftUsed };
+
+  // 4) Livraison (selon réglage) : le client doit d'abord confirmer dans le bot
+  if (confirmModes(env).includes(mode) && env.RL) {
+    const recap = [
+      `${mode === "pickup" ? "🏪" : "🛵"} <b>Ta commande ${num}</b>`, "",
+      ...items.map(i => i.label ? `• ${esc(i.name)} — ${esc(i.label)} — ${eur(i.price)}` : `• ${String(i.qty).replace(".", ",")} × ${esc(i.name)} — ${eur(i.price)}`),
+      "", `💶 <b>Total : ${eur(o.total)}</b>`,
+      mode === "pickup" ? `🏪 Retrait à ${hour(slot)}` : `📍 ${esc(addr)}\n📞 ${esc(tel)}`,
+      "", `👉 <b>Appuie sur « Je confirme » pour envoyer ta commande.</b>`,
+      `<i>Sans confirmation, elle est annulée dans ${CONFIRM_MINUTES} minutes.</i>`,
+    ];
+    const ask = await sendToCustomer(env, "sendMessage", {
+      chat_id: user.id, parse_mode: "HTML", text: recap.join("\n"),
+      reply_markup: { inline_keyboard: [[
+        { text: "✅ Je confirme", callback_data: `cf:${num}` },
+        { text: "❌ Annuler", callback_data: `cx:${num}` },
+      ]] },
+    });
+    if (!ask.ok) return json({ ok: false, error: "write" }, 403);
+    await env.RL.put("pend:" + num, JSON.stringify(o), { expirationTtl: CONFIRM_MINUTES * 60 });
+    await addLog(env, user.id, log, now);
+    return json({ ok: true, num, pending: true, bot: await botName(env) });
+  }
+
+  const done = await finalizeOrder(env, o);
+  if (!done.ok) return json({ ok: false, error: "send" }, 502);
+  await addLog(env, user.id, log, now);
+  return json({ ok: true, num });
+}
+
+// Envoie la commande dans le groupe (ou à toi), met à jour stats et parrainage, prévient le client.
+async function finalizeOrder(env, o) {
+  const { num, now, user, items, total, disc, ref, mode, slot, addr, tel } = o;
+  const acctKey = "acct:" + user.id;
+  const acct = env.RL ? await getJSON(env, acctKey) : null;
+  let giftUsed = o.giftUsed;
+  if (giftUsed && (!acct || publicAcct(acct, env).rewards < 1)) { giftUsed = false; o.items = items.filter(i => !i.name.startsWith("🎁 ")); }
+  // Message pour toi
   const name = [user.first_name, user.last_name].filter(Boolean).join(" ") || "Client";
   const who = user.username ? `${esc(name)} (@${esc(user.username)})` : `<a href="tg://user?id=${user.id}">${esc(name)}</a>`;
   const lines = [
     `🛒 <b>Nouvelle commande ${num}</b>`,
     `👤 ${who}`,
     "",
-    ...items.map(i => i.label ? `• ${esc(i.name)} — ${esc(i.label)} — ${eur(i.price)}` : `• ${String(i.qty).replace(".", ",")} × ${esc(i.name)} — ${eur(i.price)}`),
+    ...o.items.map(i => i.label ? `• ${esc(i.name)} — ${esc(i.label)} — ${eur(i.price)}` : `• ${String(i.qty).replace(".", ",")} × ${esc(i.name)} — ${eur(i.price)}`),
     "",
     `💶 <b>Total : ${eur(total)}</b>` + (disc > 0 ? ` (parrainage −${eur(disc)}, code ${esc(ref)})` : ""),
   ];
@@ -285,6 +326,7 @@ async function handleOrder(request, env) {
   if (acct && acct.referredBy && !acct.firstOrder) parrain = await getJSON(env, "acct:" + acct.referredBy);
   if (parrain) lines.push(`👥 Filleul de ${esc(parrain.name || "")} (1re commande : parrainage validé)`);
   if (giftUsed) lines.push("🎁 Contient un article offert (10 parrainages)");
+  if (o.confirmed) lines.push("✅ Confirmée par le client dans le bot");
   lines.push("", "💬 <i>Réponds à ce message pour écrire au client.</i>");
 
   const sent = await sendToOrders(env, {
@@ -295,9 +337,7 @@ async function handleOrder(request, env) {
       { text: "❌ Annuler", callback_data: `no:${user.id}:${num}` },
     ]] },
   });
-  if (!sent.ok) return json({ ok: false, error: "send" }, 502);
-
-  await addLog(env, user.id, log, now);
+  if (!sent.ok) return { ok: false };
   if (env.RL) {
     // Pour /stats et /commandes (gardé 8 jours)
     await env.RL.put(`ord:${pad(now)}:${num}`, "1", {
@@ -328,14 +368,14 @@ async function handleOrder(request, env) {
     }).catch(() => {});
   }
 
-  // 5) Confirmation au client (s'il a autorisé le bot à lui écrire)
-  await sendToCustomer(env, "sendMessage", {
+  // Confirmation au client (s'il a autorisé le bot à lui écrire)
+  if (!o.confirmed) await sendToCustomer(env, "sendMessage", {
     chat_id: user.id,
     text: `✅ Commande ${num} reçue, merci !\n` +
       (mode === "pickup" ? `Retrait prévu à ${hour(slot)}. On te prévient quand elle est prête.` : "On te contacte pour la livraison."),
   }).catch(() => {});
 
-  return json({ ok: true, num });
+  return { ok: true };
 }
 
 // ---------- Une seule boutique ouverte par client ----------
@@ -837,6 +877,7 @@ async function healthReport(env, origin) {
     line(g.ok, g.ok ? `Groupe des commandes « ${esc(g.result.title || "")} » relié` : "Groupe des commandes introuvable", "ajoute le bot au groupe et vérifie ORDERS_CHAT_ID (tape /groupe dans le groupe)");
   } else ok.push("➖ Pas de groupe des commandes : elles arrivent ici");
   ok.push((await isOpen(env)) ? "🟢 Commandes ouvertes" : "🔴 Commandes fermées (/enligne pour ouvrir)");
+  { const cm = confirmModes(env); ok.push("📩 Confirmation par le client : " + (cm.length === 2 ? "toutes les commandes" : cm.length ? "livraisons" : "désactivée")); }
 
   const head = bad.length ? `⚠️ <b>${bad.length} point${bad.length > 1 ? "s" : ""} à vérifier</b>` : "✅ <b>Tout est OK</b>";
   return `🩺 <b>Bilan du bot et de la boutique</b>\n${head}\n\n` + (bad.length ? bad.join("\n") + "\n\n" : "") + ok.join("\n");
@@ -847,6 +888,7 @@ async function onButton(cq, env) {
   const answer = (t, alert) => tg(env, "answerCallbackQuery", { callback_query_id: cq.id, text: t, show_alert: !!alert });
   const p = String(cq.data || "").split(":");
   const fromAdmin = !!env.ADMIN_CHAT_ID && String(cq.from.id) === String(env.ADMIN_CHAT_ID);
+  if (p[0] === "cf" || p[0] === "cx") { await onCustomerConfirm(cq, p, env, answer); return; }
   // Boutons Prête / Annuler : toi, ou un membre du groupe des commandes
   const orderButton = (p[0] === "ok" || p[0] === "no") && cq.message && (await isOrdersGroup(env, cq.message.chat.id));
   if (!fromAdmin && !orderButton) { await answer(); return; }
@@ -913,6 +955,28 @@ async function onButton(cq, env) {
   const by = cq.message && (await isOrdersGroup(env, cq.message.chat.id)) && cq.from.first_name ? ` par ${cq.from.first_name}` : "";
   await appendToMessage(label + by + (r.ok ? " · client prévenu" : " · client non prévenu (il n'a pas autorisé le bot)"));
   await answer(label);
+}
+
+// Le client confirme (ou annule) sa commande depuis le message du bot
+async function onCustomerConfirm(cq, p, env, answer) {
+  const key = "pend:" + p[1];
+  const raw = env.RL ? await env.RL.get(key) : null;
+  const msg = cq.message ? { chat_id: cq.message.chat.id, message_id: cq.message.message_id } : null;
+  const edit = line => msg && tg(env, "editMessageText", { ...msg, text: (cq.message.text || "") + "\n\n" + line, entities: cq.message.entities || [] });
+  if (!raw) { await edit("⌛ Délai dépassé : cette commande a été annulée. Refais-la depuis la boutique."); await answer("Commande expirée", true); return; }
+  const o = JSON.parse(raw);
+  if (String(o.user.id) !== String(cq.from.id)) { await answer(); return; }
+  await env.RL.delete(key); // un seul clic compte
+  if (p[0] === "cx") { await edit("❌ Commande annulée. Rien n'a été envoyé."); await answer("Commande annulée"); return; }
+  o.confirmed = true;
+  const done = await finalizeOrder(env, o);
+  if (!done.ok) {
+    await env.RL.put(key, raw, { expirationTtl: CONFIRM_MINUTES * 60 });
+    await answer("Envoi impossible pour le moment, réessaie dans un instant.", true); return;
+  }
+  await edit(o.mode === "pickup" ? `✅ Confirmée ! Commande envoyée. Retrait prévu à ${hour(o.slot)}, on te prévient quand elle est prête.`
+    : "✅ Confirmée ! Commande envoyée, on te contacte pour la livraison.");
+  await answer("Commande confirmée ✅");
 }
 
 // ---------- Publier dans le canal ----------
@@ -1034,6 +1098,12 @@ function parseWhen(arg) {
 }
 
 // ---------- Suppression des messages clients au bout de 24 h ----------
+async function botName(env) {
+  let n = env.RL ? await env.RL.get("cfg:botname") : null;
+  if (!n) { const me = await tg(env, "getMe", {}); n = me.ok ? me.result.username : ""; if (n && env.RL) await env.RL.put("cfg:botname", n, { expirationTtl: 86400 }); }
+  if (!n) { const m = String(env.APP_LINK || "").match(/t\.me\/([A-Za-z0-9_]+)/); n = m ? m[1] : ""; }
+  return n || "";
+}
 async function sendToCustomer(env, method, body) {
   const r = await tg(env, method, body);
   if (r.ok && r.result && r.result.message_id) await track(env, body.chat_id, r.result.message_id);

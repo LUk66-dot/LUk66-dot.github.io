@@ -10,7 +10,7 @@
 window.PS_CONFIG = {
 
   // Adresse de ton serveur Cloudflare (entre les guillemets)
-  SERVER_URL: "https://panier-street.luk114063.workers.dev",
+  SERVER_URL: "https://panier-street.luk114063.workers.devs",
 
   // Thème par défaut : "neon", "braise", "graffiti", "givre" ou "jaune"
   THEME: "neon",
@@ -18,7 +18,7 @@ window.PS_CONFIG = {
   THEME_PICKER: true,
 
   // Smileys qui flottent pendant l'animation de lancement (séparés par un espace)
-  INTRO_SMILEYS: "❄️ ❄️ ❄️ ❄️ 🌿 🌿 🌿 🌿 🧈 🧈 🧈 🧈 🍬 🍬 🍬 🍬 🍫 🍫 🍫 🍫",
+  INTRO_SMILEYS: "❄️ ❄️ 🌿 🌿 🧈 🧈 🍬 🍬 🍫 🍫",
 
   // Retrait sur place : adresse, horaires (heures pleines) et temps de préparation
   PICKUP_ADDRESS: "4 Rue des 4 buissons, 38230 Tignieu-Jameyzieu",
@@ -120,6 +120,8 @@ Quantités :
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <title>Panier de la Street</title>
+
+
 
 
 
@@ -603,6 +605,15 @@ nav.tabs .tab[aria-selected="true"] b{filter:drop-shadow(0 0 6px var(--glow))}
 :root[data-style="street-givre"] .i-title span.hl{color:#9fdcff}
 @keyframes freeze{0%{opacity:0;filter:blur(10px);transform:translateY(-12px);color:#6fb6ff}60%{opacity:1;filter:blur(1px);text-shadow:0 0 30px #fff}100%{opacity:1;filter:none;transform:none}}
 @media (prefers-reduced-motion:reduce){:root[data-style="street-givre"] body::after,.i-snow b{animation:none!important}}
+/* Validation de la commande dans le bot */
+.mustconfirm{display:flex;gap:10px;align-items:flex-start;text-align:left;background:color-mix(in srgb,var(--tag) 14%,var(--surface));border:1.5px solid var(--tag);border-radius:10px;padding:10px 12px;margin:10px 0;font-size:.84rem;line-height:1.4;color:var(--ink)}
+.mustconfirm>span{font-size:1.3rem;line-height:1}
+.mustconfirm p{margin:0}.mustconfirm p b:first-child{display:block;font-size:.92rem;margin-bottom:2px}
+.mustconfirm.big{font-size:.92rem;padding:14px;animation:pendPulse 2s ease-in-out infinite}
+.mustconfirm.big p b:first-child{font-size:1.02rem}
+@keyframes pendPulse{50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--tag) 25%,transparent)}}
+.done.pend .check{background:none;font-size:2.4rem}
+.mustconfirm p,.done .mustconfirm p{color:var(--ink)}
 /* Effets de survol seulement sur ordinateur (sur iPhone, ils gênaient le menu Quantité) */
 @media (hover:hover) and (pointer:fine){
 .card:hover{transform:translateY(-2px);border-color:var(--tag);box-shadow:0 8px 24px -10px var(--glow)}
@@ -742,7 +753,7 @@ if (tg) { tg.ready(); tg.expand(); try{ tg.setHeaderColor("#0d1424"); tg.setBack
 // ===== Une seule boutique ouverte à la fois =====
 // Chaque appui sur « Commander » peut ouvrir un nouvel onglet Telegram. Chaque onglet s'annonce
 // (au téléphone et au serveur) ; les plus anciens voient qu'un onglet plus récent existe et se ferment.
-const APP_VERSION = "2026.11.05-e";
+const APP_VERSION = "2026.11.05-f";
 (function(){
   if (!tg || !tg.close) return;
   const me = Date.now() + "-" + Math.random().toString(36).slice(2, 8);
@@ -769,7 +780,7 @@ const APP_VERSION = "2026.11.05-e";
   window.addEventListener("focus", check);
 })();
 
-const state = {tab:"deals", cat:"Tout", q:"", sort:"recent", favs:new Set(), cart:{}, ordered:false};
+const state = {tab:"deals", cat:"Tout", q:"", sort:"recent", favs:new Set(), cart:{}, ordered:false, confirmModes:["delivery"]};
 try { JSON.parse(localStorage.getItem("bpc-favs")||"[]").forEach(id=>state.favs.add(id)); } catch(e){}
 try { state.cart = JSON.parse(localStorage.getItem("bpc-cart")||"{}") || {}; } catch(e){}
 // Panier gardé d'une visite à l'autre : on retire les produits supprimés ou renommés,
@@ -1000,6 +1011,15 @@ function renderCart(v){
     const recap = L.mode==="pickup"
       ? `<div><span>Mode</span><b>Retrait sur place</b></div><div><span>Heure</span><b>${slotLabel(L.slot)}</b></div>`
       : `<div><span>Mode</span><b>Livraison</b></div><div><span>Adresse</span><b>${(L.addr||"").replace(/</g,"&lt;")}</b></div><div><span>Téléphone</span><b>${(L.tel||"").replace(/</g,"&lt;")}</b></div>`;
+    if(L.pending){
+      v.innerHTML = `<div class="done pend"><div class="check">📩</div><h2 class="sec">Plus qu'une étape !</h2>
+        <div class="mustconfirm big"><p><b>Valide ta commande ${L.num||""} dans le bot</b>Ouvre le message du bot et appuie sur <b>« ✅ Je confirme »</b>.<br>Sans confirmation, elle est annulée dans 15 minutes.</p></div>
+        ${L.bot ? `<button class="btn big" type="button" data-openbot="${L.bot}">📩 Ouvrir le message du bot</button>` : ""}
+        <div class="recap">${recap}<div class="rt"><span>Total</span><b>${eur(L.total||0)}</b></div></div>
+        ${payNote()}
+        <button class="btn" data-tab="deals">Continuer mes achats</button></div>`;
+      return;
+    }
     v.innerHTML = `<div class="done"><div class="check">✓</div><h2 class="sec">Commande ${L.num||""} envoyée</h2>
       <p>${L.mode==="pickup" ? "Ta commande sera prête à l'heure choisie. Présente ce numéro au retrait." : "On te contacte au numéro indiqué pour organiser la livraison."}</p>
       <div class="recap">${recap}${L.mode==="delivery" ? `<div><span>Livraison</span><b>${L.fee ? eur(L.fee) : "Gratuite"}</b></div>` : `<div><span>Retrait</span><b>Gratuit</b></div>`}${L.disc?`<div><span>Parrainage</span><b>−${eur(L.disc)}</b></div>`:""}<div class="rt"><span>Total</span><b>${eur(L.total||0)}</b></div></div>
@@ -1167,6 +1187,7 @@ function orderForm(total){
     ${err.general?`<p class="err" role="alert">${err.general}</p>`:""}
     ${feeLines(o, total)}
     ${payNote()}
+    ${o.mode && state.confirmModes.includes(o.mode) ? `<div class="mustconfirm"><span aria-hidden="true">📩</span><p><b>Validation obligatoire</b>Après ce bouton, le bot t'envoie un message : appuie sur <b>« ✅ Je confirme »</b> pour que ta commande soit envoyée.</p></div>` : ""}
     <button class="btn big" type="submit" id="confirm">Valider la commande · ${eur(total + orderFee(o))}</button>
     <button class="link" type="button" id="cancel">Retour au panier</button></form>`;
 }
@@ -1219,7 +1240,7 @@ document.addEventListener("submit", async e=>{
   const payload = {initData: (tg && tg.initData) || "", items, total:state._total + fee,
     mode:o.mode, slot:o.slot, addr:fullAddr(o), tel:o.tel.trim(), gift: state.gift || null};
   const fail = msg => { state.sending=false; state.order.err={general:msg}; render(); const f=document.querySelector(".err"); if(f) f.scrollIntoView({block:"center",behavior:"smooth"}); };
-  let num;
+  let num, pending = false, bot = "";
   if(SERVER_URL){
     if(!payload.initData){ fail("Ouvre la boutique depuis Telegram pour passer commande."); return; }
     try{
@@ -1228,12 +1249,14 @@ document.addEventListener("submit", async e=>{
       if(!j.ok){
         if(j.error==="gift"){ state.gift=null; saveGift(); state.sending=false; render(); toast("Ton article offert n'est plus disponible"); return; }
         if(j.error==="closed"){ state.shopOpen=false; state.confirm=false; state.sending=false; render(); toast("La boutique vient de fermer"); return; }
+        if(j.error==="write"){ state.askedWrite=false; if(tg && tg.requestWriteAccess){ try{ tg.requestWriteAccess(()=>{}); }catch(err){} }
+          fail("Pour valider ta commande, le bot doit pouvoir t'envoyer un message. Accepte la demande de Telegram, puis appuie à nouveau sur Valider."); return; }
         fail(j.error==="rate" ? `Limite atteinte. Tu pourras recommander dans ${mmss(j.wait||60)}.`
           : j.error==="auth" ? "Ta session Telegram a expiré. Ferme la boutique et rouvre-la."
           : "La commande n'a pas pu être envoyée. Réessaie dans un instant.");
         return;
       }
-      num = j.num;
+      num = j.num; pending = !!j.pending; bot = j.bot || "";
     }catch(err){ fail("Connexion impossible. Vérifie ta connexion internet et réessaie."); return; }
   } else if(payload.initData){
     // Ouverte dans Telegram mais pas reliée au serveur : on ne fait pas semblant
@@ -1243,7 +1266,7 @@ document.addEventListener("submit", async e=>{
     num = "PS-" + String(Date.now()).slice(-5);
   }
   {
-    state.lastOrder = {num, mode:o.mode, slot:o.slot, addr:fullAddr(o), tel:o.tel.trim(), fee, total:state._total + fee};
+    state.lastOrder = {num, pending, bot, mode:o.mode, slot:o.slot, addr:fullAddr(o), tel:o.tel.trim(), fee, total:state._total + fee};
     if(state.gift){ state.gift=null; saveGift(); }
     if(state.acct.status==="ok") state.acct.status="stale";
     logOrder(); state.sending=false; state.confirm=false; state.cart={}; saveCart();
@@ -1254,6 +1277,8 @@ document.addEventListener("submit", async e=>{
 setInterval(()=>{ const cd=document.getElementById("cd"); if(!cd) return; const b=blockInfo(); if(b) cd.textContent=mmss(b.s); else render(); }, 1000);
 
 document.addEventListener("click", e=>{
+  const ob = e.target.closest && e.target.closest("[data-openbot]");
+  if(ob){ const u = "https://t.me/" + ob.dataset.openbot; if(tg && tg.openTelegramLink) tg.openTelegramLink(u); else window.open(u, "_blank"); return; }
   if(e.target.id==="checkout"){ if(blockInfo() || state.shopOpen===false){ render(); return; }
     // Demande au client l'autorisation de recevoir les messages du bot (suivi de commande)
     if(tg && !state.askedWrite && tg.isVersionAtLeast && tg.isVersionAtLeast("6.9")){ state.askedWrite=true; try{ tg.requestWriteAccess(()=>{}); }catch(err){} }
@@ -1316,6 +1341,7 @@ async function refreshShopStatus(){
   try{
     const j = await fetch(SERVER_URL + "/status", {cache:"no-store"}).then(r=>r.json());
     const open = !!(j && j.open);
+    if(j && Array.isArray(j.confirm)) state.confirmModes = j.confirm;
     if(open !== state.shopOpen){ state.shopOpen = open; if(!open) state.confirm=false; render(); }
   }catch(e){}
 }
