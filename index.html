@@ -10,7 +10,7 @@
 window.PS_CONFIG = {
 
   // Adresse de ton serveur Cloudflare (entre les guillemets)
-  SERVER_URL: "https://panier-street.luk114063.workers.dev",
+  SERVER_URL: "",
 
   // Thème par défaut : "neon", "jaune", "graffiti", "beton" ou "rouge"
   THEME: "neon",
@@ -117,6 +117,7 @@ Quantités :
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <title>Panier de la Street</title>
+
 
 
 
@@ -654,6 +655,29 @@ header{padding-block:8px 8px;gap:8px}
 .acct-soon p{margin:0;font-weight:700}
 .acct-soon ul{margin:0;padding-left:4px;list-style:none;display:grid;gap:6px;color:var(--muted)}
 .acct-badge{justify-self:start;background:var(--chip);color:var(--tag);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:3px 9px;border-radius:99px}
+.acct-intro{display:grid;gap:6px;background:var(--surface);border:1px solid var(--tag);border-radius:14px;padding:14px;box-shadow:0 0 14px rgba(41,224,255,.18)}
+.acct-intro span{color:var(--muted);font-size:.9rem;line-height:1.4}
+.acctform{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.acctform small{font-weight:400;color:var(--muted)}
+.refbox2{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px}
+.refbox2 .lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.refbox2 .refcode{display:flex;align-items:center;gap:8px}
+.refbox2 .refcode span{flex:1;font-family:var(--display);font-size:1.5rem;letter-spacing:.08em;color:var(--tag);user-select:all}
+.refprog{display:grid;gap:8px;background:var(--bg);border-radius:10px;padding:10px 12px}
+.refprog-h{display:flex;align-items:baseline;gap:8px}
+.refprog-h b{font-family:var(--display);font-size:1.4rem;color:var(--hot)}
+.refprog-h span{color:var(--muted);font-size:.85rem}
+.dots{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}
+.dots i{height:10px;border-radius:99px;background:var(--chip)}
+.dots i.on{background:var(--tag);box-shadow:0 0 8px rgba(41,224,255,.5)}
+.gift-win{margin-top:12px;display:grid;gap:8px;justify-items:start;background:var(--surface);border:2px solid var(--hot);border-radius:14px;padding:14px}
+.gift-win b{font-size:1rem}
+.gift-win span{color:var(--muted);font-size:.88rem}
+.giftlist{margin-top:8px;display:grid;gap:6px}
+.giftpick{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.giftpick:hover,.giftpick:focus-visible{border-color:var(--hot);outline:none}
+.giftpick .thumb{width:44px;height:44px;font-size:1.4rem}
+.giftline{border-color:var(--hot)}
 </style>
 <style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
@@ -837,7 +861,7 @@ try { state.cart = JSON.parse(localStorage.getItem("bpc-cart")||"{}") || {}; } c
 Object.keys(state.cart).forEach(id=>{ if(!DEALS.some(d=>d.id===+id)) delete state.cart[id]; }); // retire les produits supprimés
 const saveFavs = () => { try { localStorage.setItem("bpc-favs", JSON.stringify([...state.favs])); } catch(e){} };
 const saveCart = () => { try { localStorage.setItem("bpc-cart", JSON.stringify(state.cart)); } catch(e){} updateBadge(); };
-const cartCount = () => Object.values(state.cart).filter(q => q > 0).length;   // nombre d'articles différents
+const cartCount = () => Object.values(state.cart).filter(q => q > 0).length + (state.gift ? 1 : 0);   // nombre d'articles différents
 function updateBadge(){ const b=document.querySelector("#badge"); const n=cartCount(); b.textContent=n; b.hidden=!n; }
 
 const $ = s => document.querySelector(s);
@@ -905,7 +929,7 @@ function render(){
   $("#closedbar").hidden = state.shopOpen !== false;
   $("#searchWrap").hidden = $("#chips").hidden = state.tab==="codes" || state.tab==="cart" || state.tab==="ref" || state.tab==="compte";
   if(state.tab==="cart"){ renderCart(v); return; }
-  if(state.tab==="compte"){ renderAccount(v); return; }
+  if(state.tab==="compte"){ if(state.acct.status==="stale") state.acct.status="idle"; renderAccount(v); return; }
   if(state.tab==="ref"){ renderRef(v); return; }
   if(state.tab==="codes"){
     v.innerHTML = `<h2 class="sec">Codes promo du moment</h2><div class="feed">` + CODES.map((c,i)=>`
@@ -933,29 +957,130 @@ function render(){
   $("#sort").value = state.sort;
 }
 
-// ===== Onglet Compte (à configurer plus tard) =====
-function renderAccount(v){
-  const u = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-  const name = u ? [u.first_name, u.last_name].filter(Boolean).join(" ") : "";
-  const initial = (name || "?").trim().charAt(0).toUpperCase();
-  v.innerHTML = `<h2 class="sec">Mon compte</h2>
-  <div class="acct">
-    <div class="acct-av" aria-hidden="true">${u ? initial : "👤"}</div>
-    <div class="acct-id">
-      <b>${name ? name.replace(/</g,"&lt;") : "Bienvenue !"}</b>
-      <span>${u && u.username ? "@" + String(u.username).replace(/</g,"&lt;") : "Ton compte est lié à Telegram"}</span>
-    </div>
-  </div>
-  <div class="acct-soon">
-    <span class="acct-badge">Bientôt</span>
-    <p>Ton espace client arrive très vite :</p>
-    <ul>
-      <li>🧾 L'historique de tes commandes</li>
-      <li>🎁 Tes avantages fidélité</li>
-      <li>📍 Tes adresses enregistrées</li>
-    </ul>
-  </div>`;
+// ===== Onglet Compte : création de compte + parrainage =====
+state.acct = { status: "idle", data: null, err: "", choosing: false };
+try { state.gift = JSON.parse(localStorage.getItem("ps-gift") || "null"); } catch (e) { state.gift = null; }
+const saveGift = () => { try { localStorage.setItem("ps-gift", JSON.stringify(state.gift)); } catch (e) {} };
+const tgUser = () => (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
+const refPrefill = (() => { const sp = tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param; return sp && /^ref_PS[A-Z0-9]{3,8}$/i.test(sp) ? sp.slice(4).toUpperCase() : ""; })();
+const escH = t => String(t == null ? "" : t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+async function accountCall(body){
+  if (!SERVER_URL) {   // aperçu : compte simulé dans ce navigateur
+    let d = null; try { d = JSON.parse(localStorage.getItem("ps-demo-acct") || "null"); } catch (e) {}
+    if (body.action === "create" && !d) {
+      d = { name: body.name || "Toi", tel: body.tel || "", code: "PSDEMO7", referred: !!body.refCode, valid: 3, progress: 3, pending: 1, goal: 10, rewards: 0, claimed: 0, created: Date.now(), shareLink: "", demo: true };
+      try { localStorage.setItem("ps-demo-acct", JSON.stringify(d)); } catch (e) {}
+    }
+    return { ok: true, account: d };
+  }
+  const r = await fetch(SERVER_URL + "/account", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ initData: (tg && tg.initData) || "", ...body }) });
+  return r.json();
 }
+async function loadAccount(force){
+  const A = state.acct;
+  if (A.status === "loading" || (A.status === "ok" && !force)) return;
+  if (SERVER_URL && !(tg && tg.initData)) { A.status = "notg"; render(); return; }
+  A.status = "loading"; render();
+  try {
+    const j = await accountCall({ action: "get" });
+    if (!j.ok) throw new Error(j.error || "erreur");
+    A.data = j.account; A.status = j.account ? "ok" : "none";
+  } catch (e) { A.status = "error"; }
+  if (state.tab === "compte") render();
+}
+function renderAccount(v){
+  const A = state.acct, u = tgUser();
+  if (A.status === "idle") { loadAccount(); }
+  let html = `<h2 class="sec">Mon compte</h2>`;
+  if (A.status === "notg") {
+    v.innerHTML = html + `<p class="empty">Ouvre la boutique depuis Telegram pour créer ton compte.</p>`; return;
+  }
+  if (A.status === "loading" || A.status === "idle") { v.innerHTML = html + `<p class="empty">Chargement…</p>`; return; }
+  if (A.status === "error") { v.innerHTML = html + `<p class="empty">Impossible de charger ton compte.<br><button class="btn" id="acctRetry" style="margin-top:10px">Réessayer</button></p>`; return; }
+
+  if (A.status === "none") {
+    const name = u ? [u.first_name, u.last_name].filter(Boolean).join(" ") : "";
+    v.innerHTML = html + `
+    <div class="acct-intro">
+      <b>Crée ton compte en 10 secondes</b>
+      <span>Gratuit, lié à ton Telegram. Tu reçois ton <b>code de parrainage</b> : à ${10} amis parrainés, <b>1 article au choix offert</b> 🎁</span>
+    </div>
+    <form class="orderform acctform" id="acctForm" novalidate>
+      <div class="field"><label for="acName">Prénom</label><input id="acName" maxlength="40" autocomplete="given-name" value="${escH(name)}" placeholder="Ton prénom"></div>
+      <div class="field"><label for="acTel">Téléphone <small>(facultatif)</small></label><input id="acTel" type="tel" inputmode="tel" autocomplete="tel" placeholder="06 12 34 56 78"></div>
+      <div class="field"><label for="acRef">Code de parrainage <small>(si un ami t'a invité)</small></label><input id="acRef" autocapitalize="characters" autocomplete="off" placeholder="Ex : PSK7Q2M" value="${escH(refPrefill)}"></div>
+      ${A.err ? `<p class="err" role="alert">${A.err}</p>` : ""}
+      <button class="btn big" type="submit" id="acctCreate">Créer mon compte</button>
+      <p class="hint" style="text-align:center">Tes infos servent uniquement à tes commandes et au parrainage.</p>
+    </form>`;
+    return;
+  }
+
+  const d = A.data, goal = d.goal || 10, prog = d.progress || 0;
+  const initial = (d.name || "?").trim().charAt(0).toUpperCase();
+  const dots = Array.from({ length: goal }, (_, i) => `<i class="${i < prog ? "on" : ""}"></i>`).join("");
+  html += `
+  <div class="acct">
+    <div class="acct-av" aria-hidden="true">${escH(initial)}</div>
+    <div class="acct-id"><b>${escH(d.name)}</b><span>${u && u.username ? "@" + escH(u.username) + " · " : ""}membre depuis le ${new Date(d.created || Date.now()).toLocaleDateString("fr-FR")}</span></div>
+  </div>`;
+  if (d.rewards > 0) {
+    html += `<div class="gift-win"><b>🎁 Tu as gagné ${d.rewards > 1 ? d.rewards + " articles offerts" : "1 article offert"} !</b>
+      ${state.gift ? `<span>Choisi : <b>${escH(state.gift.name)}</b>. Il sera ajouté à ta prochaine commande.</span><button class="link" id="giftChange">Changer d'article</button>`
+                   : `<span>Choisis ton article : il sera ajouté gratuitement à ta prochaine commande.</span><button class="btn" id="giftChoose">Choisir mon article</button>`}
+    </div>`;
+    if (A.choosing) html += `<div class="giftlist">${DEALS.map(x => `<button class="giftpick" data-gift="${x.id}"><span class="thumb sm">${thumbHTML(x)}</span><b>${escH(x.name)}</b></button>`).join("")}</div>`;
+  }
+  html += `
+  <div class="refbox2">
+    <span class="lbl">Ton code de parrainage</span>
+    <div class="refcode"><span>${escH(d.code)}</span><button class="btn ghost" id="refCopy">Copier</button></div>
+    <button class="btn big" id="refShare2">Partager à mes amis</button>
+    <div class="refprog">
+      <div class="refprog-h"><b>${prog}/${goal}</b><span>parrainages validés</span></div>
+      <div class="dots">${dots}</div>
+      ${d.pending ? `<p class="hint">⏳ ${d.pending} ami${d.pending > 1 ? "s ont" : " a"} créé un compte avec ton code : validé dès sa première commande.</p>` : ""}
+    </div>
+    <p class="hint">Un parrainage est validé quand ton ami crée son compte avec ton code <b>et passe sa première commande</b>. Tous les ${goal} parrainages validés : <b>1 article au choix offert</b>.</p>
+  </div>
+  ${d.demo ? `<p class="hint" style="text-align:center">Aperçu : compte et chiffres d'exemple.</p>` : ""}`;
+  v.innerHTML = html;
+}
+document.addEventListener("submit", async e => {
+  if (e.target.id !== "acctForm") return;
+  e.preventDefault();
+  const A = state.acct, btn = document.getElementById("acctCreate");
+  const name = document.getElementById("acName").value.trim(), tel = document.getElementById("acTel").value.trim(), refCode = document.getElementById("acRef").value.trim().toUpperCase();
+  if (!name) { A.err = "Indique ton prénom."; render(); return; }
+  if (tel && !/^(\+33\d{9}|0\d{9})$/.test(tel.replace(/[^\d+]/g, ""))) { A.err = "Ce numéro n'est pas valide (exemple : 06 12 34 56 78), ou laisse-le vide."; render(); return; }
+  btn.disabled = true; btn.textContent = "Création…";
+  try {
+    const j = await accountCall({ action: "create", name, tel, refCode });
+    if (!j.ok) {
+      A.err = j.error === "refcode" ? "Ce code de parrainage n'existe pas. Vérifie-le ou laisse le champ vide."
+        : j.error === "selfref" ? "Tu ne peux pas utiliser ton propre code."
+        : j.error === "tel" ? "Ce numéro n'est pas valide." : "La création a échoué. Réessaie dans un instant.";
+      render(); return;
+    }
+    A.data = j.account; A.status = "ok"; A.err = ""; haptic(); toast("Compte créé 🎉"); render();
+  } catch (err) { A.err = "Connexion impossible. Vérifie ta connexion et réessaie."; render(); }
+});
+document.addEventListener("click", e => {
+  const id = e.target.id, A = state.acct;
+  if (id === "acctRetry") { A.status = "idle"; render(); return; }
+  if (id === "refCopy" && A.data) { copyText(A.data.code, "Code copié"); return; }
+  if (id === "refShare2" && A.data) {
+    const txt = `Rejoins Panier de la Street avec mon code ${A.data.code} 🛒`;
+    if (A.data.shareLink && tg && tg.openTelegramLink) tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(A.data.shareLink)}&text=${encodeURIComponent(txt)}`);
+    else copyText((A.data.shareLink ? A.data.shareLink + "\n" : "") + txt, "Message copié, colle-le à tes amis");
+    return;
+  }
+  if (id === "giftChoose" || id === "giftChange") { A.choosing = true; render(); return; }
+  const g = e.target.closest("[data-gift]");
+  if (g) { const x = DEALS.find(d => d.id === +g.dataset.gift); if (x) { state.gift = { id: x.id, name: x.name }; saveGift(); A.choosing = false; haptic(); toast("Article offert ajouté au panier 🎁"); render(); updateBadge(); } return; }
+  if (e.target.closest("[data-ungift]")) { state.gift = null; saveGift(); render(); updateBadge(); }
+});
 function renderCart(v){
   if(state.ordered){
     const L=state.lastOrder||{};
@@ -972,7 +1097,7 @@ function renderCart(v){
     return;
   }
   const items = Object.entries(state.cart).map(([id,q])=>({d:DEALS.find(x=>x.id===+id),q})).filter(i=>i.d);
-  if(!items.length){
+  if(!items.length && !state.gift){
     v.innerHTML = `<h2 class="sec">Mon panier</h2><p class="empty">Ton panier est vide.<br>Choisis une quantité sur un produit pour l'ajouter ici.</p>`;
     return;
   }
@@ -986,7 +1111,12 @@ function renderCart(v){
       <div class="thumb sm" aria-hidden="true">${thumbHTML(d)}</div>
       <div class="info"><div class="name sm">${d.name}</div><div class="now sm">${eur(priceFor(d,q))}</div></div>
       <div class="lineqty">${presets(d.id)}</div>
-    </div>`).join("")}</div>
+    </div>`).join("")}${state.gift ? `
+    <div class="line giftline">
+      <div class="thumb sm" aria-hidden="true">🎁</div>
+      <div class="info"><div class="name sm">${escH(state.gift.name)}</div><div class="now sm"><span class="free">Offert</span> · parrainage</div></div>
+      <div class="lineqty"><button class="link" data-ungift="1">Retirer</button></div>
+    </div>` : ""}</div>
   <div class="summary">
     <div class="limit"><span aria-hidden="true">⏱️</span>Maximum ${MAX_PER_HOUR} commandes par heure</div>
     ${payNote()}
@@ -1176,7 +1306,7 @@ document.addEventListener("submit", async e=>{
   const fee = orderFee(o);
   if (fee > 0) items.push({id:0, name:"Frais de livraison", qty:1, price:fee});
   const payload = {initData: (tg && tg.initData) || "", items, total:state._total + fee, disc:state._disc||0, ref: state._disc ? state.refApplied : "",
-    mode:o.mode, slot:o.slot, addr:fullAddr(o), tel:o.tel.trim()};
+    mode:o.mode, slot:o.slot, addr:fullAddr(o), tel:o.tel.trim(), gift: state.gift || null};
   const fail = msg => { state.sending=false; state.order.err={general:msg}; render(); const f=document.querySelector(".err"); if(f) f.scrollIntoView({block:"center",behavior:"smooth"}); };
   let num;
   if(SERVER_URL){
@@ -1185,6 +1315,7 @@ document.addEventListener("submit", async e=>{
       const r = await fetch(SERVER_URL + "/order", {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(payload)});
       const j = await r.json().catch(()=>({}));
       if(!j.ok){
+        if(j.error==="gift"){ state.gift=null; saveGift(); state.sending=false; render(); toast("Ton article offert n'est plus disponible"); return; }
         if(j.error==="closed"){ state.shopOpen=false; state.confirm=false; state.sending=false; render(); toast("La boutique vient de fermer"); return; }
         fail(j.error==="rate" ? `Limite atteinte. Tu pourras recommander dans ${mmss(j.wait||60)}.`
           : j.error==="auth" ? "Ta session Telegram a expiré. Ferme la boutique et rouvre-la."
@@ -1201,6 +1332,8 @@ document.addEventListener("submit", async e=>{
     state.lastOrder = {num, mode:o.mode, slot:o.slot, addr:fullAddr(o), tel:o.tel.trim(), fee, total:state._total + fee, disc:state._disc||0, ref:state._disc?state.refApplied:""};
     if(state._disc){ refSet("bpc-ref-used","1"); state.refApplied=""; }
     refSet("bpc-first-done","1");
+    if(state.gift){ state.gift=null; saveGift(); }
+    if(state.acct.status==="ok") state.acct.status="stale";
     logOrder(); state.sending=false; state.confirm=false; state.cart={}; saveCart();
     state.order={mode:"", slot:"", addr:"", cp:"", tel:"", err:{}, addrOk:null, addrApi:"ok"}; state.ordered=true; haptic(); render(); window.scrollTo(0,0);
   }

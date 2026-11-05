@@ -17,6 +17,7 @@ const MAX_PER_HOUR = 3;     // commandes maximum par heure et par client
 const COOLDOWN_S = 120;     // attente minimum entre deux commandes (secondes)
 const DELETE_AFTER_H = 24;  // suppression des messages clients après X heures
 const TZ = "Europe/Paris";
+const REFERRAL_GOAL = 10;   // parrainages validés pour gagner 1 article offert
 
 // Menu qui s'affiche quand tu tapes « / » dans la conversation avec ton bot
 const ADMIN_COMMANDS = [
@@ -46,6 +47,7 @@ export default {
     if (request.method === "OPTIONS") return cors(new Response(null, { status: 204 }));
     try {
       if (url.pathname === "/order" && request.method === "POST") return cors(await handleOrder(request, env));
+      if (url.pathname === "/account" && request.method === "POST") return cors(await handleAccount(request, env));
       if (url.pathname === "/webhook" && request.method === "POST") return await handleWebhook(request, env);
       if (url.pathname === "/setup") return await setup(url, env);
       if (url.pathname === "/status") return cors(json({ ok: true, open: await isOpen(env) }));
@@ -111,10 +113,20 @@ async function handleOrder(request, env) {
   const user = await verifyInitData(String(body.initData || ""), env.BOT_TOKEN);
   if (!user || !user.id) return json({ ok: false, error: "auth" }, 401);
 
+  // Compte client (parrainage / article offert)
+  const acctKey = "acct:" + user.id;
+  const acct = env.RL ? await getJSON(env, acctKey) : null;
+
   // 2) Contrôle du contenu
   const items = (Array.isArray(body.items) ? body.items : []).slice(0, 30)
     .map(i => ({ name: str(i.name, 80), qty: clamp(Math.round((parseFloat(i.qty) || 0) * 1000) / 1000, 0, 999), label: str(i.label, 40), price: money(i.price) }))
     .filter(i => i.name && i.qty > 0);
+  let giftUsed = false;
+  if (body.gift && body.gift.name) {
+    if (!acct || publicAcct(acct, env).rewards < 1) return json({ ok: false, error: "gift" }, 400);
+    items.push({ name: "🎁 " + str(body.gift.name, 80) + " (offert, parrainage)", qty: 1, label: "1 offert", price: 0 });
+    giftUsed = true;
+  }
   if (!items.length) return json({ ok: false, error: "bad" }, 400);
   const mode = body.mode === "pickup" || body.mode === "delivery" ? body.mode : "";
   const slot = Number(body.slot) || 0;
@@ -151,6 +163,10 @@ async function handleOrder(request, env) {
   ];
   if (mode === "pickup") lines.push(`🏪 <b>Retrait sur place</b> à ${hour(slot)}`);
   else lines.push(`🛵 <b>Livraison</b>`, `📍 ${esc(addr)}`, `📞 ${esc(tel)}`);
+  let parrain = null;
+  if (acct && acct.referredBy && !acct.firstOrder) parrain = await getJSON(env, "acct:" + acct.referredBy);
+  if (parrain) lines.push(`👥 Filleul de ${esc(parrain.name || "")} (1re commande : parrainage validé)`);
+  if (giftUsed) lines.push("🎁 Contient un article offert (10 parrainages)");
   lines.push("", "💬 <i>Réponds à ce message pour écrire au client.</i>");
 
   const sent = await tg(env, "sendMessage", {
@@ -176,6 +192,25 @@ async function handleOrder(request, env) {
       await env.RL.put(`map:${sent.result.message_id}`, String(user.id), { expirationTtl: 7 * 86400 });
   }
 
+  // Parrainage : article offert utilisé, 1re commande d'un filleul validée
+  if (acct && (giftUsed || (acct.referredBy && !acct.firstOrder))) {
+    if (giftUsed) acct.claimed = (acct.claimed || 0) + 1;
+    acct.firstOrder = true;
+    await putJSON(env, acctKey, acct);
+  }
+  if (parrain) {
+    parrain.valid = (parrain.valid || 0) + 1;
+    parrain.pending = Math.max(0, (parrain.pending || 0) - 1);
+    await putJSON(env, "acct:" + acct.referredBy, parrain);
+    const step = parrain.valid % REFERRAL_GOAL;
+    await sendToCustomer(env, "sendMessage", {
+      chat_id: acct.referredBy,
+      text: step === 0
+        ? `🎁 Bravo ! ${REFERRAL_GOAL} parrainages validés : tu as gagné 1 article au choix offert !\nChoisis-le dans l'onglet Compte de la boutique.`
+        : `🎉 ${acct.name || "Un ami"} a passé sa première commande avec ton code !\nParrainages validés : ${step}/${REFERRAL_GOAL}`,
+    }).catch(() => {});
+  }
+
   // 5) Confirmation au client (s'il a autorisé le bot à lui écrire)
   await sendToCustomer(env, "sendMessage", {
     chat_id: user.id,
@@ -185,6 +220,75 @@ async function handleOrder(request, env) {
 
   return json({ ok: true, num });
 }
+
+// ---------- Compte client et parrainage ----------
+async function handleAccount(request, env) {
+  if (!env.BOT_TOKEN || !env.RL) return json({ ok: false, error: "config" }, 503);
+  const body = await request.json().catch(() => null);
+  if (!body) return json({ ok: false, error: "bad" }, 400);
+  const user = await verifyInitData(String(body.initData || ""), env.BOT_TOKEN);
+  if (!user || !user.id) return json({ ok: false, error: "auth" }, 401);
+  const key = "acct:" + user.id;
+  let acct = await getJSON(env, key);
+
+  if (body.action === "create") {
+    if (acct) return json({ ok: true, account: publicAcct(acct, env) });
+    const name = str(body.name, 40) || user.first_name || "Client";
+    const tel = str(body.tel, 20);
+    if (tel && !/^(\+33\d{9}|0\d{9})$/.test(tel.replace(/[^\d+]/g, ""))) return json({ ok: false, error: "tel" }, 400);
+    let referredBy = "";
+    const rc = str(body.refCode, 12).toUpperCase().replace(/\s/g, "");
+    if (rc) {
+      const owner = await env.RL.get("code:" + rc);
+      if (!owner) return json({ ok: false, error: "refcode" }, 400);
+      if (owner === String(user.id)) return json({ ok: false, error: "selfref" }, 400);
+      referredBy = owner;
+    }
+    const code = await newRefCode(env);
+    acct = { id: user.id, name, tel, username: user.username || "", code, referredBy, valid: 0, pending: 0, claimed: 0, firstOrder: false, created: Date.now() };
+    await putJSON(env, key, acct);
+    await env.RL.put("code:" + code, String(user.id));
+    if (referredBy) {
+      const p = await getJSON(env, "acct:" + referredBy);
+      if (p) {
+        p.pending = (p.pending || 0) + 1;
+        await putJSON(env, "acct:" + referredBy, p);
+        await sendToCustomer(env, "sendMessage", {
+          chat_id: referredBy,
+          text: `👥 ${name} a créé son compte avec ton code !\nLe parrainage sera validé dès sa première commande.`,
+        }).catch(() => {});
+      }
+    }
+    if (env.ADMIN_CHAT_ID)
+      await tg(env, "sendMessage", { chat_id: env.ADMIN_CHAT_ID, text: `👤 Nouveau compte : ${name}${user.username ? " (@" + user.username + ")" : ""}${referredBy ? " · parrainé" : ""}` });
+    return json({ ok: true, account: publicAcct(acct, env) });
+  }
+
+  return json({ ok: true, account: acct ? publicAcct(acct, env) : null });
+}
+function publicAcct(a, env) {
+  const valid = a.valid || 0, earned = Math.floor(valid / REFERRAL_GOAL);
+  return {
+    name: a.name, tel: a.tel || "", code: a.code, referred: !!a.referredBy,
+    valid, progress: valid % REFERRAL_GOAL, pending: a.pending || 0, goal: REFERRAL_GOAL,
+    rewards: Math.max(0, earned - (a.claimed || 0)), claimed: a.claimed || 0, created: a.created,
+    shareLink: env.APP_LINK ? `${env.APP_LINK}?startapp=ref_${a.code}` : "",
+  };
+}
+async function newRefCode(env) {
+  const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  for (let i = 0; i < 10; i++) {
+    const r = crypto.getRandomValues(new Uint8Array(5));
+    const c = "PS" + [...r].map(x => A[x % A.length]).join("");
+    if (!(await env.RL.get("code:" + c))) return c;
+  }
+  return "PS" + Date.now().toString(36).toUpperCase().slice(-6);
+}
+async function getJSON(env, key) {
+  if (!env.RL) return null;
+  try { return JSON.parse((await env.RL.get(key)) || "null"); } catch (e) { return null; }
+}
+async function putJSON(env, key, val) { if (env.RL) await env.RL.put(key, JSON.stringify(val)); }
 
 // ---------- Messages et boutons reçus par le bot ----------
 async function handleWebhook(request, env) {
