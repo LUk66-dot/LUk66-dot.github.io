@@ -26,6 +26,7 @@ const ADMIN_COMMANDS = [
   { command: "annonce", description: "Publier un post avec le bouton Commander" },
   { command: "programmer", description: "Programmer un post (ex : /programmer 18:30)" },
   { command: "programmes", description: "Voir et annuler les posts programmés" },
+  { command: "bienvenue", description: "Publier un message de bienvenue (6 modèles)" },
   { command: "sondage", description: "Sondage : /sondage Question | Choix 1 | Choix 2" },
   { command: "stats", description: "Abonnés, commandes et chiffre du jour" },
   { command: "commandes", description: "Liste des commandes du jour" },
@@ -33,6 +34,104 @@ const ADMIN_COMMANDS = [
   { command: "statut", description: "La boutique est-elle ouverte ?" },
   { command: "nettoyer", description: "Supprimer les vieux messages clients" },
   { command: "aide", description: "Toutes les commandes expliquées" },
+];
+
+
+// ===== Messages de bienvenue (/bienvenue) =====
+// Mise en forme Telegram : <b>gras</b> <i>italique</i> <u>souligné</u> <s>barré</s>
+// <code>surligné</code> <tg-spoiler>caché</tg-spoiler> <blockquote>encadré</blockquote>
+// Tu peux modifier ces textes librement (garde bien les balises ouvertes ET fermées).
+const WELCOME_MESSAGES = [
+  { name: "Classique",
+    text:
+`🛒 <b>BIENVENUE CHEZ PANIER DE LA STREET</b> 🛒
+
+Ici, tu commandes en <b>quelques secondes</b>, direct depuis Telegram 📲
+
+<b>Comment ça marche ?</b>
+<b>1️⃣</b> À chaque <b>ouverture</b> 🟢, appuie sur <code>🛒 Commander</code> sous l'annonce
+<b>2️⃣</b> Choisis tes articles et ta <b>quantité</b>
+<b>3️⃣</b> Choisis <u>retrait sur place</u> 🏪 ou <u>livraison</u> 🛵
+<b>4️⃣</b> Valide : tu reçois ta <b>confirmation</b> et un message quand c'est <b>prêt</b> ✅
+
+💶 <b>Paiement en espèces uniquement</b>
+🟢 On annonce ici chaque <b>ouverture</b> et 🔴 chaque <b>fermeture</b>
+
+<i>Active les notifications du canal pour ne rien rater</i> 🔔` },
+
+  { name: "Street",
+    text:
+`🔥🔥 <b>T'ES ARRIVÉ AU BON ENDROIT</b> 🔥🔥
+
+<b>PANIER DE LA STREET</b>, c'est <u>simple</u>, <u>rapide</u>, <u>sans prise de tête</u> 💯
+
+<blockquote>🛒 Tu choisis
+🏪 Tu récupères <b>gratuitement</b>, ou 🛵 on te livre
+💶 Tu payes en <b>espèces</b></blockquote>
+👉 Dès qu'on annonce l'<b>ouverture</b> 🟢, appuie sur <code>🛒 Commander</code> et c'est parti 🚀
+
+<b>Partage le canal à tes potes</b>, ça nous aide grave 🙏` },
+
+  { name: "Questions / réponses",
+    text:
+`👋 <b>Bienvenue sur Panier de la Street !</b>
+Tout ce qu'il faut savoir en 30 secondes 👇
+
+❓ <b>Comment je commande ?</b>
+👉 À chaque <b>ouverture</b> 🟢, appuie sur <code>🛒 Commander</code> sous l'annonce : la boutique s'ouvre <u>direct dans Telegram</u>.
+
+❓ <b>Je récupère comment ?</b>
+👉 <b>Retrait sur place gratuit</b> 🏪 à l'heure que tu choisis, ou <b>livraison</b> 🛵 (gratuite dans le <b>38230</b>).
+
+❓ <b>Je paye comment ?</b>
+👉 <b>En espèces uniquement</b> 💶 au retrait ou à la livraison.
+
+❓ <b>Je sais quand c'est prêt ?</b>
+👉 Oui ! Le bot t'envoie un <b>message</b> dès que ta commande est <b>prête</b> ✅
+
+❓ <b>C'est ouvert quand ?</b>
+👉 On l'annonce <u>ici</u> : 🟢 <b>ouvert</b> / 🔴 <b>fermé</b>.` },
+
+  { name: "Express",
+    text:
+`⚡️ <b>PANIER DE LA STREET</b> ⚡️
+
+🛒 <b>Commande</b> en 3 clics
+🏪 <b>Retrait</b> gratuit
+🛵 <b>Livraison</b> dispo
+💶 <b>Espèces</b> uniquement
+🔔 <b>Notif</b> quand c'est prêt
+🎁 <b>Parrainage</b> = articles offerts
+
+🟢 <b>Guette l'ouverture</b> et appuie sur <code>🛒 Commander</code>` },
+
+  { name: "Parrainage",
+    text:
+`🎁 <b>BIENVENUE ! ICI, INVITER TES POTES, ÇA RAPPORTE</b> 🎁
+
+Commande en quelques secondes avec le bouton <code>🛒 Commander</code> à chaque <b>ouverture</b> 🟢
+<b>Retrait gratuit</b> 🏪 ou <b>livraison</b> 🛵 · paiement en <b>espèces</b> 💶
+
+<blockquote><b>💎 LE PARRAINAGE</b>
+1️⃣ Crée ton compte dans l'onglet <b>👤 Compte</b>
+2️⃣ Partage ton <b>code perso</b> à tes potes
+3️⃣ <b>10 potes</b> qui passent leur 1re commande = <u><b>1 article au choix OFFERT</b></u> 🎉</blockquote>
+<i>Et ça recommence tous les 10 parrainages</i> 😏` },
+
+  { name: "Surprise",
+    text:
+`👀 <b>Psst… nouveau ici ?</b>
+
+Bienvenue chez <b>PANIER DE LA STREET</b> 🛒✨
+
+Ce que tu vas adorer 👇 <i>(appuie pour découvrir)</i>
+🎁 <tg-spoiler>10 potes parrainés = 1 article OFFERT</tg-spoiler>
+🏪 <tg-spoiler>Le retrait sur place est GRATUIT</tg-spoiler>
+🛵 <tg-spoiler>Livraison gratuite dans le 38230</tg-spoiler>
+🔔 <tg-spoiler>Le bot te prévient quand c'est prêt</tg-spoiler>
+
+💶 Paiement en <b>espèces uniquement</b>
+🟢 <b>À la prochaine ouverture</b>, appuie sur <code>🛒 Commander</code> pour découvrir la boutique` },
 ];
 
 export default {
@@ -420,6 +519,14 @@ async function onMessage(m, env, origin) {
   }
 
   // ----- Autres commandes -----
+  if (/^\/bienvenue(@\w+)?(\s|$)/.test(msg)) {
+    const arg = msg.replace(/^\/bienvenue(@\w+)?\s*/, "").trim();
+    const n = parseInt(arg, 10);
+    if (n >= 1 && n <= WELCOME_MESSAGES.length) { await publishWelcome(env, chat_id, n - 1); return; }
+    await welcomeMenu(env, chat_id);
+    return;
+  }
+
   if (msg.startsWith("/sondage")) {
     const parts = msg.replace(/^\/sondage(@\w+)?\s*/, "").split(/\s*\|\s*|\n+/).map(s => s.trim()).filter(Boolean);
     const question = parts[0], options = parts.slice(1);
@@ -529,7 +636,8 @@ async function onMessage(m, env, origin) {
         "📣 <b>/annonce</b> : publie un post avec le bouton « Commander ».\n" +
         "📅 <b>/programmer 18:30</b> : publie un post plus tard (ou <code>/programmer 08/11 12:00</code>).\n" +
         "🗓 <b>/programmes</b> : voir et annuler les posts programmés.\n" +
-        "📊 <b>/sondage Question | Choix 1 | Choix 2</b> : sondage dans le canal.\n\n" +
+        "📊 <b>/sondage Question | Choix 1 | Choix 2</b> : sondage dans le canal.\n" +
+        "👋 <b>/bienvenue</b> : choisis et publie un message de bienvenue (ou <code>/bienvenue 3</code> pour le n°3 direct).\n\n" +
         "📈 <b>/stats</b> : abonnés, commandes et chiffre du jour et de la semaine.\n" +
         "🛒 <b>/commandes</b> : la liste des commandes du jour.\n" +
         "ℹ️ <b>/statut</b> : boutique ouverte ou fermée ?\n" +
@@ -550,6 +658,33 @@ async function askContent(env, chat_id, label, extra) {
     chat_id, parse_mode: "HTML",
     text: `${label}\n\n✍️ <b>Envoie maintenant ton message</b> pour le canal : un texte, ou une photo / une vidéo avec ta légende.` +
       (extra ? `\n\n${extra}` : "") + "\n❌ /annuler : ne rien faire",
+  });
+}
+
+// ---------- /bienvenue ----------
+async function welcomeMenu(env, chat_id) {
+  const rows = [];
+  for (let i = 0; i < WELCOME_MESSAGES.length; i += 2)
+    rows.push(WELCOME_MESSAGES.slice(i, i + 2).map((m, j) => ({ text: `👁 ${i + j + 1}. ${m.name}`, callback_data: `wb:see:${i + j}` })));
+  rows.push([{ text: "🎲 Un au hasard", callback_data: "wb:see:r" }]);
+  await tg(env, "sendMessage", {
+    chat_id, parse_mode: "HTML",
+    text: "👋 <b>Message de bienvenue</b>\n\nChoisis un modèle pour voir l'<b>aperçu</b> avant de le publier dans le canal 👇",
+    reply_markup: { inline_keyboard: rows },
+  });
+}
+async function publishWelcome(env, chat_id, i) {
+  if (!env.CHANNEL) {
+    await tg(env, "sendMessage", { chat_id, text: "❌ Il manque CHANNEL dans les variables Cloudflare." });
+    return;
+  }
+  // Message d'accueil : pas de bouton Commander (il n'apparaît que sur les annonces d'ouverture)
+  const r = await tg(env, "sendMessage", { chat_id: env.CHANNEL, parse_mode: "HTML", text: WELCOME_MESSAGES[i].text });
+  await tg(env, "sendMessage", {
+    chat_id,
+    text: r.ok ? `✅ Message de bienvenue n°${i + 1} (${WELCOME_MESSAGES[i].name}) publié.\n📌 Pense à l'épingler pour que les nouveaux le voient en premier.`
+               : "❌ Publication impossible.\n" + channelHelp(env, r.description),
+    reply_markup: r.ok ? postButtons(r.result && r.result.message_id) : undefined,
   });
 }
 
@@ -642,6 +777,24 @@ async function onButton(cq, env) {
     });
   };
 
+  if (p[0] === "wb") {
+    if (p[1] === "list") { await answer(); await welcomeMenu(env, cq.message.chat.id); return; }
+    let i = p[2] === "r" ? Math.floor(Math.random() * WELCOME_MESSAGES.length) : Number(p[2]);
+    if (!(i >= 0 && i < WELCOME_MESSAGES.length)) { await answer(); return; }
+    if (p[1] === "see") {
+      await answer();
+      await tg(env, "sendMessage", {
+        chat_id: cq.message.chat.id, parse_mode: "HTML",
+        text: `👁 <b>Aperçu n°${i + 1} · ${WELCOME_MESSAGES[i].name}</b>\n➖➖➖➖➖➖➖➖\n\n` + WELCOME_MESSAGES[i].text,
+        reply_markup: { inline_keyboard: [
+          [{ text: "✅ Publier dans le canal", callback_data: `wb:go:${i}` }],
+          [{ text: "⬅️ Voir les autres", callback_data: "wb:list" }],
+        ] },
+      });
+      return;
+    }
+    if (p[1] === "go") { await answer("Publication…"); await publishWelcome(env, cq.message.chat.id, i); return; }
+  }
   if (p[0] === "pin") {
     const r = await tg(env, "pinChatMessage", { chat_id: env.CHANNEL, message_id: Number(p[1]) });
     if (r.ok) { await answer("📌 Épinglé dans le canal"); return; }
