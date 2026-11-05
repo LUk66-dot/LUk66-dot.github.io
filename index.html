@@ -10,61 +10,127 @@
 window.PS_CONFIG = {
 
   // Adresse de ton serveur Cloudflare (entre les guillemets)
-  SERVER_URL: "https://panier-street.luk114063.workers.dev",
+  SERVER_URL: "",
+
+  // Thème par défaut : "neon", "jaune", "graffiti", "beton" ou "rouge"
+  THEME: "neon",
+  // Laisser les clients changer de thème avec le rond en haut à droite : true ou false
+  THEME_PICKER: true,
 
   // Retrait sur place : adresse, horaires (heures pleines) et temps de préparation
   PICKUP_ADDRESS: "4 Rue des 4 buissons, 38230 Tignieu-Jameyzieu",
+  PICKUP_MAPS_LINK: "https://maps.app.goo.gl/a2WRT5nRgEFDpmmJ6?g_st=ic",
   OPEN_HOUR: 10,
   CLOSE_HOUR: 20,
   PREP_MINUTES: 30,
 
-  // Livraison : départements livrés (les 2 premiers chiffres du code postal)
-  DELIVERY_DEPARTMENTS: ["38", "69", "01"],
+  // Message de paiement affiché dans le panier ("" pour ne rien afficher)
+  PAYMENT_NOTE: "Paiement en espèces uniquement",
 
-  // Les boutons de catégories (« Tout » est ajouté automatiquement)
-  CATEGORIES: ["Maison", "Mode"],
+  // Frais de livraison : gratuite pour ces codes postaux, DELIVERY_FEE € pour les autres
+  DELIVERY_FREE_POSTCODES: ["38230"],
+  DELIVERY_FEE: 5,
 
-  /* ---------- TES PRODUITS ----------
-     Un produit = un bloc entre { et },
-     name  : le nom affiché
-     cat   : la catégorie (écrite exactement comme dans CATEGORIES)
-     prix  : les QUANTITÉS proposées pour ce produit et leur prix TOTAL
-             ex : { 1: 10, 3: 25, 5: 40 } → le menu propose 1, 3 ou 5
-             (prix avec un point : 19.99)
-     unite : le mot affiché après le nombre, propre à CE produit (ex : "paire(s)")
-             laisse "" pour afficher « Qté 1, Qté 2… »
-     image : le nom de ta photo envoyée sur GitHub (ex : "friteuse.jpg"), ou "" pour l'émoji
-     emoji : affiché si pas de photo
-     video : le nom de ta vidéo (ex : "friteuse.mp4"), ou "" s'il n'y en a pas
-     id    : un numéro unique par produit (ne réutilise jamais un ancien numéro)
-     L'ordre de la liste = l'ordre d'affichage.                                  */
-  PRODUCTS: [
-    { id: 2, name: "Jaune", cat: "Maison",
-      prix: { 1: 20, 2: 40 }, unite: "grammes",
-      image: "", emoji: "🍟", video: "" },
-
-    { id: 3, name: "Baskets running légères", cat: "Mode",
-      prix: { 1: 19.99, 2: 35.99 }, unite: "paire(s)",
-      image: "", emoji: "👟", video: "" },
-
-    { id: 6, name: "Lot de 3 bougies parfumées", cat: "Maison",
-      prix: { 1: 9.99, 3: 27.99, 5: 44.99 }, unite: "lot(s)",
-      image: "", emoji: "🕯️", video: "" },
-
-    { id: 7, name: "Doudoune légère déperlante", cat: "Mode",
-      prix: { 1: 19.99, 2: 40.99 }, unite: "",
-      image: "", emoji: "🧥", video: "" },
-
-    { id: 9, name: "Aspirateur robot avec cartographie", cat: "Maison",
-      prix: { 1: 19.99, 2: 40.99, 3: 59.99 }, unite: "",
-      image: "", emoji: "🤖", video: "" },
+  // Livraison : les codes postaux livrés, proposés au client dans une liste.
+  // Écris le code postal puis le nom de la ville. Le client devra ensuite
+  // choisir une adresse qui existe vraiment dans ce code postal.
+  DELIVERY_POSTCODES: [
+    "38230 Tignieu-Jameyzieu",
+    "69120 Vaulx-en-Velin",
+    "69001 Lyon 1er",
   ],
+
+  /* ================= TES CATÉGORIES =================
+     Les boutons de catégories se créent TOUT SEULS à partir de la ligne
+     « Catégorie : » de chaque produit (plus bas). Rien d'autre à faire :
+       - nouvelle catégorie  → écris-la sur un produit (ex : Catégorie : Sport)
+       - renommer            → change le mot sur les produits concernés
+       - supprimer           → plus aucun produit ne l'utilise = le bouton disparaît
+     Facultatif : l'ordre des boutons, séparés par des virgules.
+     Les catégories non listées ici s'affichent après.            */
+  ORDRE_CATEGORIES: "Maison, Mode",
+
+  /* ================= TES PRODUITS =================
+     Écris chaque produit comme une petite fiche, entre les deux ` ci-dessous.
+     - « Produit : » commence un nouvel article (son nom)
+     - « Catégorie : » le bouton où il apparaît (voir TES CATÉGORIES au-dessus)
+     - « Photo : » le nom de ta photo sur GitHub (laisse vide pour l'émoji)
+     - « Vidéo : » le nom de ta vidéo sur GitHub (laisse vide s'il n'y en a pas)
+     - « Emoji : » affiché quand il n'y a pas de photo
+     - Sous « Quantités : », une ligne par choix :  quantité  texte  =  prix
+         ex :  2 paires = 35,99   →  le client voit « 2 paires » à 35,99 €
+         Les quantités à virgule marchent aussi :  1,5 paires = 27,99
+     Laisse une ligne vide entre deux produits. L'ordre ici = l'ordre affiché.
+     ================================================ */
+  PRODUITS: `
+
+Produit : Friteuse sans huile 5,5 L
+Catégorie : Maison
+Photo :
+Vidéo :
+Emoji : 🍟
+Quantités :
+  1 friteuse = 19,99
+  2 friteuses = 37,99
+
+Produit : Baskets running légères
+Catégorie : Mode
+Photo :
+Vidéo :
+Emoji : 👟
+Quantités :
+  1 paire = 19,99
+  1,5 paires = 27,99
+  2 paires = 35,99
+
+Produit : Lot de 3 bougies parfumées
+Catégorie : Maison
+Photo :
+Vidéo :
+Emoji : 🕯️
+Quantités :
+  1 lot = 9,99
+  3 lots = 27,99
+  5 lots = 44,99
+
+Produit : Doudoune légère déperlante
+Catégorie : Mode
+Photo :
+Vidéo :
+Emoji : 🧥
+Quantités :
+  1 doudoune = 19,99
+  2 doudounes = 40,99
+
+Produit : Aspirateur robot avec cartographie
+Catégorie : Maison
+Photo :
+Vidéo :
+Emoji : 🤖
+Quantités :
+  1 aspirateur = 19,99
+  2 aspirateurs = 40,99
+  3 aspirateurs = 59,99
+
+`,
 };
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <title>Panier de la Street</title>
-<script>document.documentElement.setAttribute("data-style","street-neon");</script>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Archivo:wght@400;500;700&display=swap">
+
+
+
+
+
+<script>
+(function(){
+  var map = {neon:"street-neon", jaune:"street", graffiti:"street-graff", beton:"street-clair", rouge:"street-rouge"};
+  var c = window.PS_CONFIG || {}, pick = map[String(c.THEME || "neon").toLowerCase()] || "street-neon";
+  try { var saved = localStorage.getItem("ps-theme"); if (c.THEME_PICKER !== false && saved && Object.values(map).indexOf(saved) > -1) pick = saved; } catch(e){}
+  document.documentElement.setAttribute("data-style", pick);
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Archivo:wght@400;500;700&family=Anton&family=Permanent+Marker&family=Bebas+Neue&family=Oswald:wght@500;700&display=swap">
 <style>
 /* Layout: one-column Mini App — sticky header with search + category chips, deal feed of "price tag" cards, bottom tab bar */
 :root{
@@ -473,6 +539,121 @@ header{padding-block:8px 8px;gap:8px}
 .thumb{overflow:hidden}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .hint.deliv{background:var(--chip);border-radius:8px;padding:7px 10px;color:var(--ink)}
+.paynote,.summary>.paynote{display:flex;align-items:center;justify-content:center!important;gap:6px;background:var(--chip);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:.88rem;font-weight:700;color:var(--ink);text-align:center}
+.cpsel{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.cpsel.on{border-color:var(--tag)}
+.flabel{font-weight:700;font-size:.9rem;margin:0}
+.addrsug{display:grid;gap:4px}
+.addrsug:empty{display:none}
+.sug{display:grid;gap:1px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px;color:var(--ink);font:inherit;cursor:pointer}
+.sug b{font-size:.9rem}
+.sug span{font-size:.78rem;color:var(--muted)}
+.sug:hover,.sug:focus-visible{border-color:var(--tag);outline:none}
+.sugmsg{margin:0;font-size:.82rem;color:var(--muted);padding:4px 2px}
+.addrok{display:flex;align-items:center;gap:10px;background:var(--chip);border:1px solid var(--ok);border-radius:10px;padding:9px 11px}
+.addrok>div{flex:1;min-width:0;display:grid}
+.addrok b{font-size:.9rem;overflow-wrap:anywhere}
+.addrok small{color:var(--ok);font-weight:700;font-size:.75rem}
+.pickbox{display:grid;gap:6px;justify-items:center;text-align:center;background:var(--surface);border:2px solid var(--tag);border-radius:14px;padding:14px 12px;box-shadow:0 0 14px rgba(41,224,255,.25)}
+.pkl{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--tag);font-weight:700}
+.pka{font-size:1.05rem;line-height:1.35;color:var(--ink);text-wrap:balance}
+.pkgo{margin-top:4px;background:var(--tag);color:var(--tag-ink);padding:8px 16px;border-radius:10px;text-decoration:none;font-weight:700}
+.done .pickbox{width:100%;max-width:380px;box-sizing:border-box}
+.free{color:var(--ok);font-weight:700}
+.feebox{display:grid;gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.feebox>div{display:flex;justify-content:space-between;gap:10px;font-size:.9rem;font-variant-numeric:tabular-nums}
+.feebox .ft{border-top:1px solid var(--line);padding-top:6px;font-family:var(--display);font-size:1.05rem}
+
+/* ===== Rond de choix du thème ===== */
+.top{position:relative}
+.brand{padding-inline:40px}
+.themebtn{position:absolute;right:0;top:10px;width:32px;height:32px;border-radius:50%;border:2px solid var(--line);background:var(--surface);padding:3px;cursor:pointer;z-index:6}
+.themebtn span{display:block;width:100%;height:100%;border-radius:50%}
+.themebtn:focus-visible{outline:2px solid var(--tag);outline-offset:2px}
+.thememenu{position:absolute;right:0;top:48px;z-index:7;min-width:190px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:6px;display:grid;gap:2px;box-shadow:0 14px 34px rgba(0,0,0,.35)}
+.thememenu .tmh{margin:4px 8px 6px;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.thememenu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:transparent;color:var(--ink);font:500 .92rem var(--body);padding:9px 10px;border-radius:10px;cursor:pointer}
+.thememenu button[aria-checked="true"]{background:var(--chip);font-weight:700}
+.thememenu button b{margin-left:auto;color:var(--tag)}
+.thememenu i{width:20px;height:20px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(127,127,127,.4)}
+
+/* ===== Animations de lancement par thème ===== */
+.i-tape,.i-splats,.i-blocks,.i-bars{display:none;position:absolute;inset:0;pointer-events:none}
+
+/* Jaune : rubans de chantier + lettres qui tombent */
+:root[data-style="street"] .i-grid,:root[data-style="street"] .i-scan,:root[data-style="street"] .i-sparks{display:none}
+:root[data-style="street"] .i-sky{background:radial-gradient(60% 45% at 50% 55%,rgba(255,212,0,.16),transparent 70%)}
+:root[data-style="street"] .i-tape{display:block}
+:root[data-style="street"] .i-tape i{position:absolute;left:-20%;right:-20%;height:44px;
+  background:repeating-linear-gradient(-45deg,#ffd400 0 22px,#151515 22px 44px);box-shadow:0 4px 18px rgba(0,0,0,.4);
+  animation:tapeIn .7s cubic-bezier(.2,.9,.3,1) both, tapeRun 1.2s linear .7s infinite}
+:root[data-style="street"] .i-tape i:nth-child(1){top:16%;transform:rotate(-8deg);--from:-130%}
+:root[data-style="street"] .i-tape i:nth-child(2){bottom:16%;transform:rotate(6deg);--from:130%;animation-delay:.25s,.95s}
+@keyframes tapeIn{from{translate:var(--from) 0}to{translate:0 0}}
+@keyframes tapeRun{to{background-position:62px 0}}
+:root[data-style="street"] .i-logo svg{filter:none}
+:root[data-style="street"] .i-title{color:var(--ink)}
+:root[data-style="street"] .i-title span{opacity:0;animation:slam .45s cubic-bezier(.2,1.5,.4,1) var(--t) both}
+:root[data-style="street"] .i-title span.hl{color:var(--tag)}
+@keyframes slam{from{opacity:0;transform:translateY(-70px) scale(1.9)}to{opacity:1;transform:none}}
+
+/* Graffiti : taches de peinture + lettres « bombées » */
+:root[data-style="street-graff"] .i-grid,:root[data-style="street-graff"] .i-scan{display:none}
+:root[data-style="street-graff"] .i-sky{background:radial-gradient(55% 40% at 50% 50%,rgba(255,63,164,.16),transparent 70%)}
+:root[data-style="street-graff"] .i-splats{display:block}
+:root[data-style="street-graff"] .i-splats b{position:absolute;width:var(--s);height:var(--s);border-radius:46% 54% 42% 58%;background:var(--c);opacity:0;filter:blur(1px);
+  animation:splat .45s cubic-bezier(.2,1.6,.4,1) var(--dl) both}
+@keyframes splat{0%{opacity:0;transform:scale(0) rotate(0)}100%{opacity:.14;transform:scale(1) rotate(25deg)}}
+:root[data-style="street-graff"] .i-logo svg{filter:drop-shadow(3px 3px 0 #000)}
+:root[data-style="street-graff"] .i-title{color:var(--tag);text-transform:none;text-shadow:3px 3px 0 #000;transform:rotate(-3deg)}
+:root[data-style="street-graff"] .i-title span{opacity:0;animation:spray .6s ease-out var(--t) both}
+:root[data-style="street-graff"] .i-title span.hl{color:var(--hot)}
+@keyframes spray{0%{opacity:0;filter:blur(12px);transform:scale(1.5)}60%{opacity:1;filter:blur(2px)}100%{opacity:1;filter:none;transform:none}}
+
+/* Béton clair : blocs façon affiche + lettres tamponnées */
+:root[data-style="street-clair"] .i-grid,:root[data-style="street-clair"] .i-scan,:root[data-style="street-clair"] .i-sparks{display:none}
+:root[data-style="street-clair"] .i-sky{background:none}
+:root[data-style="street-clair"] .i-blocks{display:block}
+:root[data-style="street-clair"] .i-blocks i{position:absolute;height:22%;animation:blockIn .6s cubic-bezier(.2,.9,.3,1) both}
+:root[data-style="street-clair"] .i-blocks i:nth-child(1){left:0;top:8%;width:62%;background:#151515;--from:-110%}
+:root[data-style="street-clair"] .i-blocks i:nth-child(2){right:0;bottom:10%;width:55%;background:var(--tag);--from:110%;animation-delay:.2s}
+:root[data-style="street-clair"] .i-blocks i:nth-child(3){left:12%;bottom:4%;width:30%;height:6%;background:#151515;--from:-150%;animation-delay:.35s}
+@keyframes blockIn{from{translate:var(--from) 0}to{translate:0 0}}
+:root[data-style="street-clair"] .i-logo svg{filter:drop-shadow(3px 3px 0 var(--tag))}
+:root[data-style="street-clair"] .i-logo path,:root[data-style="street-clair"] .i-logo circle{stroke:var(--ink)}
+:root[data-style="street-clair"] .i-center{background:var(--bg);border:3px solid var(--ink);box-shadow:8px 8px 0 var(--ink);padding:22px 20px;margin:0 16px}
+:root[data-style="street-clair"] .i-title{color:var(--ink);font-size:clamp(1.8rem,10vw,3rem)}
+:root[data-style="street-clair"] .i-title span{opacity:0;animation:stamp .35s cubic-bezier(.2,1.7,.4,1) var(--t) both}
+:root[data-style="street-clair"] .i-title span.hl{color:var(--tag);text-shadow:2px 2px 0 var(--ink)}
+@keyframes stamp{from{opacity:0;transform:scale(3) rotate(-14deg)}to{opacity:1;transform:none}}
+
+/* Rouge : bandes de cinéma + titre qui monte */
+:root[data-style="street-rouge"] .i-grid,:root[data-style="street-rouge"] .i-scan,:root[data-style="street-rouge"] .i-sparks,:root[data-style="street-rouge"] .i-floats{display:none}
+:root[data-style="street-rouge"] .i-sky{background:radial-gradient(50% 35% at 50% 50%,rgba(232,32,42,.22),transparent 70%)}
+:root[data-style="street-rouge"] .i-bars{display:block;z-index:3}
+:root[data-style="street-rouge"] .i-bars i{position:absolute;left:0;right:0;height:50%;background:#000;animation:barsOpen 1.1s cubic-bezier(.7,0,.2,1) .3s both}
+:root[data-style="street-rouge"] .i-bars i:nth-child(1){top:0;border-bottom:3px solid var(--tag)}
+:root[data-style="street-rouge"] .i-bars i:nth-child(2){bottom:0;border-top:3px solid var(--tag)}
+@keyframes barsOpen{from{height:50%}to{height:11%}}
+:root[data-style="street-rouge"] .i-logo svg{filter:drop-shadow(0 0 10px rgba(232,32,42,.6))}
+:root[data-style="street-rouge"] .i-title{color:var(--ink);letter-spacing:.06em}
+:root[data-style="street-rouge"] .i-title span{opacity:0;animation:rise .7s cubic-bezier(.2,.9,.3,1) var(--t) both}
+:root[data-style="street-rouge"] .i-title span.hl{color:var(--tag)}
+@keyframes rise{from{opacity:0;transform:translateY(28px);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
+
+@media (prefers-reduced-motion:reduce){
+  .i-tape i,.i-splats b,.i-blocks i,.i-bars i{animation:none!important}
+  :root[data-style] .i-title span{animation:none!important;opacity:1!important}
+}
+.acct{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.acct-av{width:56px;height:56px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--tag);color:var(--tag-ink);font-family:var(--display);font-size:1.5rem}
+.acct-id{display:grid;gap:2px;min-width:0}
+.acct-id b{font-size:1.05rem;overflow-wrap:anywhere}
+.acct-id span{color:var(--muted);font-size:.85rem}
+.acct-soon{margin-top:12px;background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:16px;display:grid;gap:8px}
+.acct-soon p{margin:0;font-weight:700}
+.acct-soon ul{margin:0;padding-left:4px;list-style:none;display:grid;gap:6px;color:var(--muted)}
+.acct-badge{justify-self:start;background:var(--chip);color:var(--tag);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:3px 9px;border-radius:99px}
 </style>
 <style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
@@ -484,6 +665,10 @@ header{padding-block:8px 8px;gap:8px}
   <div class="i-grid" aria-hidden="true"></div>
   <div class="i-floats" aria-hidden="true"><span style="left:43%;--d:7.5s;--dl:-3.1s;font-size:1.61rem">👟</span><span style="left:48%;--d:7.0s;--dl:-2.7s;font-size:1.32rem">👕</span><span style="left:92%;--d:8.0s;--dl:-5.0s;font-size:1.67rem">👗</span><span style="left:32%;--d:5.7s;--dl:-1.7s;font-size:1.16rem">👜</span><span style="left:71%;--d:6.2s;--dl:-5.1s;font-size:1.41rem">🧢</span><span style="left:88%;--d:7.5s;--dl:-0.0s;font-size:1.27rem">🕶️</span><span style="left:84%;--d:6.4s;--dl:-5.9s;font-size:1.42rem">👠</span><span style="left:10%;--d:6.9s;--dl:-4.7s;font-size:1.32rem">🧥</span><span style="left:12%;--d:6.0s;--dl:-5.8s;font-size:1.71rem">👖</span><span style="left:14%;--d:5.7s;--dl:-0.6s;font-size:1.15rem">🧣</span><span style="left:74%;--d:5.5s;--dl:-3.4s;font-size:1.46rem">👟</span><span style="left:21%;--d:7.2s;--dl:-0.8s;font-size:1.61rem">👕</span><span style="left:14%;--d:6.3s;--dl:-1.3s;font-size:1.32rem">👗</span><span style="left:89%;--d:7.4s;--dl:-1.8s;font-size:1.81rem">👜</span></div>
   <div class="i-scan" aria-hidden="true"></div>
+  <div class="i-tape" aria-hidden="true"><i></i><i></i></div>
+  <div class="i-splats" aria-hidden="true"><b style="left:84%;top:40%;--s:105px;--c:var(--tag);--dl:0.20s"></b><b style="left:72%;top:11%;--s:119px;--c:var(--hot);--dl:0.38s"></b><b style="left:36%;top:14%;--s:80px;--c:#7cf0ff;--dl:0.56s"></b><b style="left:19%;top:55%;--s:120px;--c:var(--tag);--dl:0.74s"></b><b style="left:36%;top:56%;--s:129px;--c:var(--hot);--dl:0.92s"></b><b style="left:18%;top:39%;--s:61px;--c:#ffffff;--dl:1.10s"></b><b style="left:32%;top:60%;--s:95px;--c:var(--tag);--dl:1.28s"></b></div>
+  <div class="i-blocks" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="i-bars" aria-hidden="true"><i></i><i></i></div>
   <div class="i-center">
     <div class="i-logo" aria-hidden="true">
       <svg viewBox="0 0 64 64" width="84" height="84"><path class="c-body" d="M6 10h8l7 30h30l6-20H18"/><circle class="c-wheel" cx="25" cy="50" r="4"/><circle class="c-wheel" cx="47" cy="50" r="4"/></svg>
@@ -498,6 +683,8 @@ header{padding-block:8px 8px;gap:8px}
 </div>
 <div class="wrap">
   <div class="top">
+    <button class="themebtn" id="themeBtn" aria-label="Changer de thème" aria-haspopup="true" aria-expanded="false"><span></span></button>
+    <div class="thememenu" id="themeMenu" role="menu" hidden></div>
     <div class="brand">
       <h1 class="logo"><span class="dot" aria-hidden="true">🛒</span>Panier de la Street<span class="dot" aria-hidden="true">🛒</span></h1>
     </div>
@@ -524,6 +711,7 @@ header{padding-block:8px 8px;gap:8px}
   <button class="tab" role="tab" data-tab="deals" aria-selected="true"><b>📋</b>Menus</button>
   <button class="tab" role="tab" data-tab="favs" aria-selected="false"><b>♥</b>Favoris</button>
   <button class="tab" role="tab" data-tab="cart" aria-selected="false"><b class="cart-ico">🛒<span class="badge" id="badge" hidden>0</span></b>Panier</button>
+  <button class="tab" role="tab" data-tab="compte" aria-selected="false"><b>👤</b>Compte</button>
 </nav>
 <div class="toast" id="toast" role="status"></div>
 <div class="vmodal" id="vmodal" hidden role="dialog" aria-modal="true" aria-labelledby="vtitle">
@@ -567,10 +755,51 @@ const CODES = [
 ];
 const CATS = ["Tout","Maison","Mode"];
 
-// ===== Produits et catégories réglés en haut de index.html (PS_CONFIG) =====
+// ===== Produits écrits en texte simple en haut de index.html (PS_CONFIG.PRODUITS) =====
+function parseProductsText(txt){
+  const out = []; let cur = null;
+  const hashId = s => { let h = 5381; for (const ch of s) h = ((h * 33) ^ ch.codePointAt(0)) >>> 0; return (h % 900000) + 100; };
+  const price = v => parseFloat(String(v).replace(/[^\d,.]/g, "").replace(",", "."));
+  for (const raw of String(txt).split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#") || /^quantit/i.test(line)) continue;
+    const kv = line.match(/^(produit|cat[ée]gorie|photo|image|vid[ée]o|emoji)\s*:\s*(.*)$/i);
+    if (kv) {
+      const key = kv[1].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""), val = kv[2].trim();
+      if (key === "produit") { cur = { name: val, cat: "", image: "", video: "", emoji: "🛍️", prix: {}, labels: {} }; out.push(cur); }
+      else if (!cur) continue;
+      else if (key === "categorie") cur.cat = val;
+      else if (key === "photo" || key === "image") cur.image = val;
+      else if (key === "video") cur.video = val;
+      else if (key === "emoji") cur.emoji = val || "🛍️";
+      continue;
+    }
+    const q = line.match(/^(\d+(?:[.,]\d+)?)\s*([^=]*?)\s*=\s*([\d\s.,]+)\s*(€|eur|euros?)?$/i);
+    if (q && cur) {
+      const n = Math.round(parseFloat(q[1].replace(",", ".")) * 1000) / 1000, pr = price(q[3]);
+      const shown = String(n).replace(".", ",");   // 1.5 s'affiche « 1,5 »
+      if (n > 0 && Number.isFinite(pr)) { cur.prix[n] = pr; cur.labels[n] = q[2] ? `${shown} ${q[2]}` : `Qté ${shown}`; }
+    }
+  }
+  return out.filter(p => p.name && Object.keys(p.prix).length)
+    .map((p, i) => ({ ...p, id: hashId(p.name), min: i }));
+}
 (function(){
   const cfg = window.PS_CONFIG || {};
-  if (Array.isArray(cfg.PRODUCTS) && cfg.PRODUCTS.length) {
+  if (typeof cfg.PRODUITS === "string" && cfg.PRODUITS.trim()) {
+    const list = parseProductsText(cfg.PRODUITS);
+    if (list.length) { DEALS.length = 0; DEALS.push(...list); }
+    if (!(Array.isArray(cfg.CATEGORIES) && cfg.CATEGORIES.length)) {
+      const used = [...new Set(list.map(p => p.cat).filter(Boolean))];
+      // ORDRE_CATEGORIES (facultatif) : "Mode, Maison" → ces boutons d'abord, dans cet ordre
+      const norm = t => t.trim().toLowerCase();
+      const wanted = String(cfg.ORDRE_CATEGORIES || "").split(",").map(t => t.trim()).filter(Boolean);
+      const first = wanted.map(w => used.find(u => norm(u) === norm(w))).filter(Boolean);
+      const cats = [...new Set([...first, ...used])];
+      if (cats.length) { CATS.length = 0; CATS.push("Tout", ...cats); }
+    }
+  }
+  if (Array.isArray(cfg.PRODUCTS) && cfg.PRODUCTS.length && !(typeof cfg.PRODUITS === "string" && cfg.PRODUITS.trim())) {
     DEALS.length = 0;
     cfg.PRODUCTS.forEach((p, i) => {
       if (!p || !p.name) return;
@@ -608,7 +837,7 @@ try { state.cart = JSON.parse(localStorage.getItem("bpc-cart")||"{}") || {}; } c
 Object.keys(state.cart).forEach(id=>{ if(!DEALS.some(d=>d.id===+id)) delete state.cart[id]; }); // retire les produits supprimés
 const saveFavs = () => { try { localStorage.setItem("bpc-favs", JSON.stringify([...state.favs])); } catch(e){} };
 const saveCart = () => { try { localStorage.setItem("bpc-cart", JSON.stringify(state.cart)); } catch(e){} updateBadge(); };
-const cartCount = () => Object.values(state.cart).reduce((a,b)=>a+b,0);
+const cartCount = () => Object.values(state.cart).filter(q => q > 0).length;   // nombre d'articles différents
 function updateBadge(){ const b=document.querySelector("#badge"); const n=cartCount(); b.textContent=n; b.hidden=!n; }
 
 const $ = s => document.querySelector(s);
@@ -626,11 +855,11 @@ function renderChips(){
 // Quantités : le bouton affiche la quantité (0 au départ) ; un appui ouvre une liste verticale qui défile
 // Quantités proposées : celles qui ont un prix dans « prix » pour chaque produit
 function qtysFor(d, cur){
-  const q = Object.keys((d && d.prix) || {1:0}).map(Number).filter(n => Number.isInteger(n) && n > 0);
+  const q = Object.keys((d && d.prix) || {1:0}).map(Number).filter(n => Number.isFinite(n) && n > 0);
   if (cur && !q.includes(cur)) q.push(cur);
   return [...new Set(q)].sort((a,b) => a - b);
 }
-const qtyLabel = (d, n) => d && d.unite ? `${n} ${d.unite}` : `Qté ${n}`;
+const qtyLabel = (d, n) => d && d.labels && d.labels[n] ? d.labels[n] : d && d.unite ? `${n} ${d.unite}` : `Qté ${n}`;
 const TRASH = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>`;
 state.pick = {}; // quantité choisie sur la fiche, pas encore ajoutée au panier
 function presets(id, card){
@@ -674,8 +903,9 @@ function dealCard(d){
 function render(){
   const v = $("#view");
   $("#closedbar").hidden = state.shopOpen !== false;
-  $("#searchWrap").hidden = $("#chips").hidden = state.tab==="codes" || state.tab==="cart" || state.tab==="ref";
+  $("#searchWrap").hidden = $("#chips").hidden = state.tab==="codes" || state.tab==="cart" || state.tab==="ref" || state.tab==="compte";
   if(state.tab==="cart"){ renderCart(v); return; }
+  if(state.tab==="compte"){ renderAccount(v); return; }
   if(state.tab==="ref"){ renderRef(v); return; }
   if(state.tab==="codes"){
     v.innerHTML = `<h2 class="sec">Codes promo du moment</h2><div class="feed">` + CODES.map((c,i)=>`
@@ -703,15 +933,40 @@ function render(){
   $("#sort").value = state.sort;
 }
 
+// ===== Onglet Compte (à configurer plus tard) =====
+function renderAccount(v){
+  const u = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+  const name = u ? [u.first_name, u.last_name].filter(Boolean).join(" ") : "";
+  const initial = (name || "?").trim().charAt(0).toUpperCase();
+  v.innerHTML = `<h2 class="sec">Mon compte</h2>
+  <div class="acct">
+    <div class="acct-av" aria-hidden="true">${u ? initial : "👤"}</div>
+    <div class="acct-id">
+      <b>${name ? name.replace(/</g,"&lt;") : "Bienvenue !"}</b>
+      <span>${u && u.username ? "@" + String(u.username).replace(/</g,"&lt;") : "Ton compte est lié à Telegram"}</span>
+    </div>
+  </div>
+  <div class="acct-soon">
+    <span class="acct-badge">Bientôt</span>
+    <p>Ton espace client arrive très vite :</p>
+    <ul>
+      <li>🧾 L'historique de tes commandes</li>
+      <li>🎁 Tes avantages fidélité</li>
+      <li>📍 Tes adresses enregistrées</li>
+    </ul>
+  </div>`;
+}
 function renderCart(v){
   if(state.ordered){
     const L=state.lastOrder||{};
     const recap = L.mode==="pickup"
-      ? `<div><span>Mode</span><b>Retrait sur place</b></div><div><span>Heure</span><b>${slotLabel(L.slot)}</b></div><div><span>Lieu</span><b>${SHOP.address}</b></div>`
+      ? `<div><span>Mode</span><b>Retrait sur place</b></div><div><span>Heure</span><b>${slotLabel(L.slot)}</b></div>`
       : `<div><span>Mode</span><b>Livraison</b></div><div><span>Adresse</span><b>${(L.addr||"").replace(/</g,"&lt;")}</b></div><div><span>Téléphone</span><b>${(L.tel||"").replace(/</g,"&lt;")}</b></div>`;
     v.innerHTML = `<div class="done"><div class="check">✓</div><h2 class="sec">Commande ${L.num||""} envoyée</h2>
       <p>${L.mode==="pickup" ? "Ta commande sera prête à l'heure choisie. Présente ce numéro au retrait." : "On te contacte au numéro indiqué pour organiser la livraison."}</p>
-      <div class="recap">${recap}${L.disc?`<div><span>Parrainage</span><b>−${eur(L.disc)}</b></div>`:""}<div class="rt"><span>Total</span><b>${eur(L.total||0)}</b></div></div>
+      <div class="recap">${recap}${L.mode==="delivery" ? `<div><span>Livraison</span><b>${L.fee ? eur(L.fee) : "Gratuite"}</b></div>` : `<div><span>Retrait</span><b>Gratuit</b></div>`}${L.disc?`<div><span>Parrainage</span><b>−${eur(L.disc)}</b></div>`:""}<div class="rt"><span>Total</span><b>${eur(L.total||0)}</b></div></div>
+      ${L.mode==="pickup" ? pickupBox() : ""}
+      ${payNote()}
       ${SERVER_URL ? `<p class="hint">Tu recevras un message du bot quand ta commande sera ${L.mode==="pickup"?"prête":"en route"}.</p>` : `<p class="hint">Aperçu : aucune commande réelle n'a été passée.</p>`}
       <button class="btn" data-tab="deals">Continuer mes achats</button></div>`;
     return;
@@ -734,10 +989,11 @@ function renderCart(v){
     </div>`).join("")}</div>
   <div class="summary">
     <div class="limit"><span aria-hidden="true">⏱️</span>Maximum ${MAX_PER_HOUR} commandes par heure</div>
+    ${payNote()}
     <div><span>Sous-total</span><span>${eur(sub)}</span></div>
     ${disc ? `<div class="refline"><span>Parrainage (${state.refApplied}) −${REFERRAL.friendDiscountPct} %</span><span>−${eur(disc)}</span></div>` : ""}
     <div class="tot"><span>Total</span><span>${eur(total)}</span></div>
-    ${refBox()}
+
     ${checkoutArea(total)}
   </div>`;
 }
@@ -772,19 +1028,42 @@ const SHOP = {
   open: 10, close: 20,   // horaires d'ouverture (10 h – 20 h)
   prepMin: 30,           // temps de préparation minimum, en minutes
   stepMin: 15,           // un créneau toutes les 15 minutes
-  deliveryDepts: ["38", "69", "01"]   // départements livrés (2 premiers chiffres du code postal)
+  deliveryDepts: ["38", "69", "01"],  // départements livrés (2 premiers chiffres du code postal)
+  payment: "Paiement en espèces uniquement",
+  mapsUrl: "https://maps.app.goo.gl/a2WRT5nRgEFDpmmJ6?g_st=ic",   // lien du bouton « Itinéraire »
+  freePostcodes: ["38230"],   // codes postaux livrés gratuitement
+  deliveryFee: 5,             // frais de livraison pour les autres codes postaux (en €)
+  // Codes postaux livrés, choisis dans une liste (vide = on utilise deliveryDepts)
+  deliveryPostcodes: ["38230 Tignieu-Jameyzieu", "69120 Vaulx-en-Velin", "69001 Lyon 1er"]
 };
 // Réglages venant du haut de index.html (PS_CONFIG), s'ils existent
 (function(){
   const c = window.PS_CONFIG || {};
   if (c.PICKUP_ADDRESS) SHOP.address = String(c.PICKUP_ADDRESS);
+  if (c.PICKUP_MAPS_LINK) SHOP.mapsUrl = String(c.PICKUP_MAPS_LINK);
+  if (Array.isArray(c.DELIVERY_FREE_POSTCODES)) SHOP.freePostcodes = c.DELIVERY_FREE_POSTCODES.map(String);
+  if (c.DELIVERY_FEE !== undefined && Number.isFinite(+c.DELIVERY_FEE)) SHOP.deliveryFee = +c.DELIVERY_FEE;
+  if (typeof c.PAYMENT_NOTE === "string") SHOP.payment = c.PAYMENT_NOTE;
   if (Number.isFinite(+c.OPEN_HOUR) && c.OPEN_HOUR !== "") SHOP.open = +c.OPEN_HOUR;
   if (Number.isFinite(+c.CLOSE_HOUR) && c.CLOSE_HOUR !== "") SHOP.close = +c.CLOSE_HOUR;
   if (Number.isFinite(+c.PREP_MINUTES) && c.PREP_MINUTES !== "") SHOP.prepMin = +c.PREP_MINUTES;
+  if (Array.isArray(c.DELIVERY_POSTCODES)) SHOP.deliveryPostcodes = c.DELIVERY_POSTCODES.map(String).filter(Boolean);
   if (Array.isArray(c.DELIVERY_DEPARTMENTS)) SHOP.deliveryDepts = c.DELIVERY_DEPARTMENTS.map(d => String(d).padStart(2, "0"));
 })();
+const deliveryFee = cp => { const c = String(cp || "").replace(/\s/g, ""); return !c ? 0 : SHOP.freePostcodes.includes(c) ? 0 : (SHOP.deliveryFee || 0); };
+const feeLabel = cp => deliveryFee(cp) ? eur(deliveryFee(cp)) : "gratuite";
+const orderFee = o => o.mode === "delivery" ? deliveryFee(o.cp) : 0;
+function deliveryModeNote(){
+  const free = SHOP.freePostcodes.length ? `<b class="free">Gratuite</b> dans le ${SHOP.freePostcodes.join(", ")}` : "";
+  const paid = SHOP.deliveryFee ? `${eur(SHOP.deliveryFee)} ailleurs` : "";
+  return [free, paid].filter(Boolean).join(" · ") || (usePostcodes() ? "Zones : " + pcList().join(", ") : "On t'appelle pour la livraison");
+}
+const payNote = () => SHOP.payment ? `<div class="paynote"><span aria-hidden="true">💶</span>${SHOP.payment}</div>` : "";
 const deptList = () => SHOP.deliveryDepts.join(", ").replace(/, ([^,]*)$/, " et $1");
-state.order = {mode:"", slot:"", addr:"", cp:"", tel:"", err:{}};
+const usePostcodes = () => SHOP.deliveryPostcodes.length > 0;
+const pcCode = s => (String(s).match(/\d{5}/) || [""])[0];
+const pcList = () => SHOP.deliveryPostcodes.map(pcCode).filter(Boolean);
+state.order = {mode:"", slot:"", addr:"", cp:"", tel:"", err:{}, addrOk:null, addrApi:"ok"};
 const hhmm = d => d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
 function slots(){
   const out=[], now=new Date(), earliest=new Date(now.getTime()+SHOP.prepMin*60e3);
@@ -798,39 +1077,63 @@ function slots(){
   return out;
 }
 function slotLabel(v){ if(!v) return ""; const d=new Date(+v); const today=new Date().toDateString()===d.toDateString(); return `${today?"Aujourd'hui":"Demain"} à ${hhmm(d)}`; }
+const mapsLink = () => SHOP.mapsUrl || ("https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(SHOP.address));
+function pickupBox(){
+  return `<div class="pickbox">
+    <span class="pkl">📍 Adresse de retrait</span>
+    <b class="pka">${SHOP.address}</b>
+    <a class="btn pkgo" href="${mapsLink()}" target="_blank" rel="noopener" data-maps="1">🧭 Itinéraire</a>
+  </div>`;
+}
+function feeLines(o, total){
+  if (o.mode === "pickup") return `<div class="feebox"><div><span>Retrait sur place</span><b class="free">Gratuit</b></div><div class="ft"><span>Total à payer</span><b>${eur(total)}</b></div></div>`;
+  if (o.mode === "delivery" && o.cp) {
+    const f = deliveryFee(o.cp);
+    return `<div class="feebox"><div><span>Articles</span><b>${eur(total)}</b></div><div><span>Livraison (${o.cp})</span><b class="${f ? "" : "free"}">${f ? eur(f) : "Gratuite"}</b></div><div class="ft"><span>Total à payer</span><b>${eur(total + f)}</b></div></div>`;
+  }
+  return "";
+}
 function orderForm(total){
   const o=state.order, err=o.err||{};
   const groups=slots();
   const pick = `<fieldset class="modes"><legend>Comment veux-tu récupérer ta commande ?</legend>
-    <label class="mode${o.mode==="pickup"?" on":""}"><input type="radio" name="mode" id="mode-pickup" value="pickup" ${o.mode==="pickup"?"checked":""}><span class="mi" aria-hidden="true">🏪</span><b>Retrait sur place</b><small>Gratuit · prêt à l'heure choisie</small></label>
-    <label class="mode${o.mode==="delivery"?" on":""}"><input type="radio" name="mode" id="mode-delivery" value="delivery" ${o.mode==="delivery"?"checked":""}><span class="mi" aria-hidden="true">🛵</span><b>Livraison</b><small>${SHOP.deliveryDepts.length ? "Dans le " + deptList() : "On t'appelle pour la livraison"}</small></label>
+    <label class="mode${o.mode==="pickup"?" on":""}"><input type="radio" name="mode" id="mode-pickup" value="pickup" ${o.mode==="pickup"?"checked":""}><span class="mi" aria-hidden="true">🏪</span><b>Retrait sur place</b><small><b class="free">Gratuit</b> · prêt à l'heure choisie</small></label>
+    <label class="mode${o.mode==="delivery"?" on":""}"><input type="radio" name="mode" id="mode-delivery" value="delivery" ${o.mode==="delivery"?"checked":""}><span class="mi" aria-hidden="true">🛵</span><b>Livraison</b><small>${deliveryModeNote()}</small></label>
   </fieldset>${err.mode?`<p class="err">${err.mode}</p>`:""}`;
   let fields="";
   if(o.mode==="pickup"){
+    const place = pickupBox();
     if(!groups.length){
-      fields = `<div class="field"><p class="err">Plus aucun créneau de retrait aujourd'hui (ouvert de ${SHOP.open} h à ${SHOP.close} h). Choisis la livraison ou reviens demain.</p></div>`;
+      fields = place + `<div class="field"><p class="err">Plus aucun créneau de retrait aujourd'hui (ouvert de ${SHOP.open} h à ${SHOP.close} h). Choisis la livraison ou reviens demain.</p></div>`;
     } else
-    fields = `<div class="field"><label for="slot">Heure de retrait (aujourd'hui)</label>
+    fields = place + `<div class="field"><label for="slot">Heure de retrait (aujourd'hui)</label>
       <select id="slot" data-of="slot"><option value="" ${o.slot?"":"selected"} disabled>Choisir une heure</option>
       ${groups.map(g=>`<optgroup label="Aujourd'hui">${g.list.map(d=>`<option value="${d.getTime()}" ${o.slot==String(d.getTime())?"selected":""}>${hhmm(d)}</option>`).join("")}</optgroup>`).join("")}
       </select>
       <p class="hint">Préparation minimum ${SHOP.prepMin} min · ouvert de ${SHOP.open} h à ${SHOP.close} h</p>
-      <p class="hint">📍 ${SHOP.address}</p>${err.slot?`<p class="err">${err.slot}</p>`:""}</div>`;
+      ${err.slot?`<p class="err">${err.slot}</p>`:""}</div>`;
   } else if(o.mode==="delivery"){
-    fields = `${SHOP.deliveryDepts.length ? `<p class="hint deliv">🛵 Livraison uniquement dans le <b>${deptList()}</b></p>` : ""}
+    fields = usePostcodes() ? deliveryPostcodeFields(o, err) : `${SHOP.deliveryDepts.length ? `<p class="hint deliv">🛵 Livraison uniquement dans le <b>${deptList()}</b></p>` : ""}
       <div class="field"><label for="addr">Adresse de livraison</label>
       <textarea id="addr" data-of="addr" rows="2" autocomplete="street-address" placeholder="Numéro, rue et ville">${o.addr.replace(/</g,"&lt;")}</textarea>${err.addr?`<p class="err">${err.addr}</p>`:""}</div>
       <div class="field"><label for="cp">Code postal</label>
-      <input id="cp" data-of="cp" inputmode="numeric" autocomplete="postal-code" maxlength="5" placeholder="38230" value="${o.cp.replace(/"/g,"&quot;")}">${err.cp?`<p class="err">${err.cp}</p>`:""}</div>
+      <input id="cp" data-of="cp" inputmode="numeric" autocomplete="postal-code" maxlength="5" placeholder="38230" value="${o.cp.replace(/"/g,"&quot;")}">${err.cp?`<p class="err">${err.cp}</p>`:""}</div>`;
+    if (!usePostcodes() || o.cp) fields += `
       <div class="field"><label for="tel">Numéro de téléphone</label>
       <input id="tel" data-of="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="06 12 34 56 78" value="${o.tel.replace(/"/g,"&quot;")}">${err.tel?`<p class="err">${err.tel}</p>`:""}</div>`;
   }
   return `<form class="orderform" id="orderform" novalidate>${pick}${fields}
     ${err.general?`<p class="err" role="alert">${err.general}</p>`:""}
-    <button class="btn big" type="submit" id="confirm">Valider la commande · ${eur(total)}</button>
+    ${feeLines(o, total)}
+    ${payNote()}
+    <button class="btn big" type="submit" id="confirm">Valider la commande · ${eur(total + orderFee(o))}</button>
     <button class="link" type="button" id="cancel">Retour au panier</button></form>`;
 }
-const fullAddr = o => o.mode==="delivery" ? `${o.addr.trim()}, ${(o.cp||"").replace(/\s/g,"")}` : "";
+const fullAddr = o => {
+  if (o.mode !== "delivery") return "";
+  if (usePostcodes()) return o.addrOk ? o.addrOk.label : `${o.addr.trim()}, ${o.cp} (adresse non vérifiée)`;
+  return `${o.addr.trim()}, ${(o.cp||"").replace(/\s/g,"")}`;
+};
 function validateOrder(){
   const o=state.order, err={};
   if(!o.mode) err.mode="Choisis le retrait sur place ou la livraison.";
@@ -839,11 +1142,19 @@ function validateOrder(){
     else if(+o.slot < Date.now()+SHOP.prepMin*60e3 - 60e3) err.slot="Ce créneau est trop proche, choisis-en un plus tard.";
   }
   if(o.mode==="delivery"){
+    if(usePostcodes()){
+      if(!o.cp) err.cp="Choisis d'abord ton code postal dans la liste.";
+      else if(o.addrApi!=="down"){
+        if(!o.addrOk) err.addr = o.addr.trim() ? "Choisis ton adresse dans la liste des suggestions pour qu'elle soit vérifiée." : "Écris ton adresse puis choisis-la dans la liste.";
+        else if(o.addrOk.postcode!==o.cp) err.addr="Cette adresse n'est pas dans le "+o.cp+". Choisis une adresse de ce code postal.";
+      } else if(o.addr.trim().length<6) err.addr="Indique ton adresse complète (numéro et rue).";
+    } else {
     if(o.addr.trim().length<6) err.addr="Indique ton adresse complète (numéro, rue et ville).";
     const cp=(o.cp||"").replace(/\s/g,"");
     if(!/^\d{5}$/.test(cp)) err.cp="Indique un code postal à 5 chiffres, par exemple 38230.";
     else if(SHOP.deliveryDepts.length && !SHOP.deliveryDepts.includes(cp.slice(0,2)))
       err.cp=`Désolé, on livre uniquement dans le ${deptList()}. Tu peux choisir le retrait sur place.`;
+    }
     const digits=o.tel.replace(/[^\d+]/g,"");
     if(!/^(\+33\d{9}|0\d{9})$/.test(digits)) err.tel="Indique un numéro valide, par exemple 06 12 34 56 78.";
   }
@@ -861,8 +1172,10 @@ document.addEventListener("submit", async e=>{
   if(!validateOrder()){ render(); const f=document.querySelector(".err"); if(f) f.scrollIntoView({block:"center",behavior:"smooth"}); return; }
   state.sending=true; render();
   const o=state.order;
-  const items = Object.entries(state.cart).map(([id,q])=>{ const d=DEALS.find(x=>x.id===+id); return d && {id:d.id, name:d.name, qty:q, price:priceFor(d,q)}; }).filter(Boolean);
-  const payload = {initData: (tg && tg.initData) || "", items, total:state._total, disc:state._disc||0, ref: state._disc ? state.refApplied : "",
+  const items = Object.entries(state.cart).map(([id,q])=>{ const d=DEALS.find(x=>x.id===+id); return d && {id:d.id, name:d.name, qty:q, label:qtyLabel(d,q), price:priceFor(d,q)}; }).filter(Boolean);
+  const fee = orderFee(o);
+  if (fee > 0) items.push({id:0, name:"Frais de livraison", qty:1, price:fee});
+  const payload = {initData: (tg && tg.initData) || "", items, total:state._total + fee, disc:state._disc||0, ref: state._disc ? state.refApplied : "",
     mode:o.mode, slot:o.slot, addr:fullAddr(o), tel:o.tel.trim()};
   const fail = msg => { state.sending=false; state.order.err={general:msg}; render(); const f=document.querySelector(".err"); if(f) f.scrollIntoView({block:"center",behavior:"smooth"}); };
   let num;
@@ -885,11 +1198,11 @@ document.addEventListener("submit", async e=>{
     num = "PS-" + String(Date.now()).slice(-5);
   }
   {
-    state.lastOrder = {num, mode:o.mode, slot:o.slot, addr:fullAddr(o), tel:o.tel.trim(), total:state._total, disc:state._disc||0, ref:state._disc?state.refApplied:""};
+    state.lastOrder = {num, mode:o.mode, slot:o.slot, addr:fullAddr(o), tel:o.tel.trim(), fee, total:state._total + fee, disc:state._disc||0, ref:state._disc?state.refApplied:""};
     if(state._disc){ refSet("bpc-ref-used","1"); state.refApplied=""; }
     refSet("bpc-first-done","1");
     logOrder(); state.sending=false; state.confirm=false; state.cart={}; saveCart();
-    state.order={mode:"", slot:"", addr:"", cp:"", tel:"", err:{}}; state.ordered=true; haptic(); render(); window.scrollTo(0,0);
+    state.order={mode:"", slot:"", addr:"", cp:"", tel:"", err:{}, addrOk:null, addrApi:"ok"}; state.ordered=true; haptic(); render(); window.scrollTo(0,0);
   }
 });
 
@@ -912,7 +1225,7 @@ document.addEventListener("click", e=>{
     const n = state.pick[id] ?? had;
     delete state.pick[id];
     if(had===n){ state.tab="cart"; document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab==="cart")); render(); window.scrollTo(0,0); return; }
-    state.cart[id]=n; saveCart(); haptic(); toast(had ? `Quantité mise à jour : ${n}` : `Ajouté au panier (${n})`); render(); return;
+    state.cart[id]=n; saveCart(); haptic(); toast(had ? `Quantité mise à jour : ${qtyLabel(DEALS.find(x=>x.id===id), n)}` : `Ajouté au panier (${qtyLabel(DEALS.find(x=>x.id===id), n)})`); render(); return;
   }
   if(t.dataset.set){
     const [id,n] = t.dataset.set.split(":").map(Number);
@@ -988,7 +1301,7 @@ function myRefCode(){
 }
 const myRefLink = () => `${REFERRAL.appLink}?startapp=ref_${myRefCode()}`;
 const refEligible = () => !refGet("bpc-first-done") && !refGet("bpc-ref-used");
-const refDiscount = sub => (state.refApplied && refEligible()) ? Math.round(sub*REFERRAL.friendDiscountPct)/100 : 0;
+const refDiscount = sub => 0; // parrainage désactivé
 state.refApplied = "";
 state.refInput = "";
 state.refErr = "";
@@ -1075,6 +1388,93 @@ refreshShopStatus();
 setInterval(refreshShopStatus, 60000);
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) refreshShopStatus(); });
 
+// ===== Livraison : code postal dans une liste + adresse vérifiée (API Adresse de l'État) =====
+function deliveryPostcodeFields(o, err){
+  const opts = SHOP.deliveryPostcodes.map(s => { const c = pcCode(s); return c ? `<option value="${c}" ${o.cp===c?"selected":""}>${s} · livraison ${feeLabel(c)}</option>` : ""; }).join("");
+  let html = `<div class="field"><label for="cpSel">1. Ton code postal</label>
+    <select id="cpSel" data-cp="1" class="cpsel${o.cp?" on":""}">${o.cp?"":`<option value="" selected disabled hidden>Choisis ton code postal</option>`}${opts}</select>
+    <p class="hint">On livre uniquement dans ces zones. Ton code postal n'y est pas ? Choisis le retrait sur place.</p>
+    ${err.cp?`<p class="err">${err.cp}</p>`:""}</div>`;
+  if (!o.cp) return html;
+  if (o.addrOk) {
+    html += `<div class="field"><span class="flabel">2. Ton adresse</span>
+      <div class="addrok"><span>✅</span><div><b>${esc(o.addrOk.label)}</b><small>Adresse vérifiée</small></div>
+      <button type="button" class="link" id="addrChange">Modifier</button></div></div>`;
+  } else {
+    html += `<div class="field"><label for="addr">2. Ton adresse (numéro et rue)</label>
+      <input id="addr" data-addr="1" autocomplete="off" placeholder="Ex : 4 rue des 4 buissons" value="${o.addr.replace(/"/g,"&quot;")}">
+      <div id="addrSug" class="addrsug" role="listbox" aria-label="Adresses trouvées">${o.addr.trim().length >= 3 && state.addrSug ? sugHTML(state.addrSug) : ""}</div>
+      ${o.addrApi==="down" ? `<p class="hint">La vérification d'adresse ne répond pas pour le moment : écris ton adresse complète, on la vérifiera nous-mêmes.</p>` : `<p class="hint">Commence à écrire puis <b>choisis ton adresse dans la liste</b>.</p>`}
+      ${err.addr?`<p class="err">${err.addr}</p>`:""}</div>`;
+  }
+  return html;
+}
+const esc = t => String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+let addrTimer = null, addrSeq = 0;
+function sugHTML(list){
+  return list.length
+    ? list.map((p, i) => `<button type="button" role="option" class="sug" data-sug="${i}"><b>${esc(p.name || p.label)}</b><span>${esc(p.postcode)} ${esc(p.city || "")}</span></button>`).join("")
+    : `<p class="sugmsg">Aucune adresse trouvée dans le ${state.order.cp}. Vérifie l'orthographe ou ajoute le numéro.</p>`;
+}
+function showSug(html){ const b = document.getElementById("addrSug"); if (b) b.innerHTML = html; }
+async function fetchAddresses(q, cp){
+  // Plusieurs façons d'interroger le service d'adresses de l'État, essayées dans l'ordre
+  const tries = [
+    `https://data.geopf.fr/geocodage/search?q=${encodeURIComponent(q)}&postcode=${cp}&limit=8`,
+    `https://data.geopf.fr/geocodage/search?q=${encodeURIComponent(q + " " + cp)}&limit=15`,
+    `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&postcode=${cp}&limit=8`,
+  ];
+  let lastErr;
+  for (const url of tries) {
+    try {
+      const r = await fetch(url);
+      if (!r.ok) { lastErr = "http " + r.status; continue; }
+      const j = await r.json();
+      if (!j || !Array.isArray(j.features)) { lastErr = "format"; continue; }
+      return j.features.map(f => f.properties || {});
+    } catch (e) { lastErr = e && e.message; }
+  }
+  throw new Error(lastErr || "indisponible");
+}
+async function searchAddress(q){
+  const o = state.order, seq = ++addrSeq;
+  if (q.trim().length < 3) { showSug(""); return; }
+  showSug(`<p class="sugmsg">Recherche…</p>`);
+  try {
+    const props = await fetchAddresses(q.trim(), o.cp);
+    if (seq !== addrSeq) return; // une recherche plus récente est en cours
+    const seen = new Set();
+    const list = props
+      .filter(p => String(p.postcode) === o.cp && p.label && ["housenumber", "street", "locality"].includes(p.type))
+      .filter(p => !seen.has(p.label) && seen.add(p.label))
+      .slice(0, 6);
+    state.addrSug = list;
+    showSug(sugHTML(list));
+  } catch (e) {
+    if (seq !== addrSeq) return;
+    o.addrApi = "down"; render();          // la vérification ne répond pas : saisie libre
+    const el = document.getElementById("addr"); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+  }
+}
+document.addEventListener("input", e => {
+  if (!e.target.dataset || !e.target.dataset.addr) return;
+  state.order.addr = e.target.value; state.order.addrOk = null;
+  if (state.order.addrApi === "down") return;
+  clearTimeout(addrTimer); addrTimer = setTimeout(() => searchAddress(e.target.value), 350);
+});
+document.addEventListener("change", e => {
+  if (!e.target.dataset || !e.target.dataset.cp) return;
+  const o = state.order; o.cp = e.target.value; o.addr = ""; o.addrOk = null; o.err = {}; state.addrSug = [];
+  render(); setTimeout(() => { const el = document.getElementById("addr"); if (el) el.focus(); }, 50);
+});
+document.addEventListener("click", e => {
+  const mp = e.target.closest("[data-maps]");
+  if (mp && tg && tg.openLink) { e.preventDefault(); try { tg.openLink(mp.href); } catch (err) { window.open(mp.href, "_blank"); } return; }
+  const s = e.target.closest("[data-sug]");
+  if (s) { const p = (state.addrSug || [])[+s.dataset.sug]; if (p) { state.order.addrOk = p; state.order.addr = p.label; if (state.order.err) delete state.order.err.addr; haptic(); render(); } return; }
+  if (e.target.id === "addrChange") { state.order.addrOk = null; render(); setTimeout(() => { const el = document.getElementById("addr"); if (el) el.focus(); }, 50); }
+});
+
 renderChips(); render(); updateBadge();
 
 // ===== Vidéo produit =====
@@ -1093,9 +1493,53 @@ document.addEventListener("keydown", e=>{ if(e.key==="Escape" && !$("#vmodal").h
 
 
 // Écran de bienvenue : toucher pour passer, puis retrait du DOM
-(function(){ const sp=document.getElementById("splash"); if(!sp) return;
+// ===== Animation de lancement (rejouée quand on change de thème) =====
+const INTRO_HTML = (document.getElementById("splash") || {}).outerHTML || "";
+function wireIntro(sp){
+  if(!sp) return;
   sp.addEventListener("click", ()=>sp.classList.add("skip"));
   sp.addEventListener("animationend", e=>{ if(e.target===sp && e.animationName==="introOut") sp.remove(); });
+}
+function playIntro(){
+  if(!INTRO_HTML) return;
+  const old = document.getElementById("splash"); if(old) old.remove();
+  document.body.insertAdjacentHTML("afterbegin", INTRO_HTML);
+  wireIntro(document.getElementById("splash"));
+}
+wireIntro(document.getElementById("splash"));
+
+// ===== Choix du thème (rond en haut à droite) =====
+const THEMES = [
+  {key:"street-neon",  name:"Néon",        a:"#29e0ff", b:"#0d1424"},
+  {key:"street",       name:"Jaune",       a:"#ffd400", b:"#1c1d20"},
+  {key:"street-graff", name:"Graffiti",    a:"#ff3fa4", b:"#18161c"},
+  {key:"street-clair", name:"Béton clair", a:"#ff6a13", b:"#e4e3df"},
+  {key:"street-rouge", name:"Rouge",       a:"#e8202a", b:"#141212"},
+];
+(function(){
+  const btn = document.getElementById("themeBtn"), menu = document.getElementById("themeMenu");
+  if (!btn || !menu) return;
+  if ((window.PS_CONFIG || {}).THEME_PICKER === false) { btn.hidden = true; return; }
+  const cur = () => document.documentElement.getAttribute("data-style");
+  const paint = () => {
+    const t = THEMES.find(x => x.key === cur()) || THEMES[0];
+    btn.firstElementChild.style.background = `conic-gradient(${t.a} 0 50%, ${t.b} 0)`;
+    menu.innerHTML = `<p class="tmh">Choisis ton thème</p>` + THEMES.map(x =>
+      `<button role="menuitemradio" aria-checked="${x.key===cur()}" data-theme="${x.key}"><i style="background:conic-gradient(${x.a} 0 50%, ${x.b} 0)"></i>${x.name}${x.key===cur()?' <b>✓</b>':''}</button>`).join("");
+  };
+  const open = v => { menu.hidden = !v; btn.setAttribute("aria-expanded", v); };
+  paint();
+  btn.addEventListener("click", e => { e.stopPropagation(); paint(); open(menu.hidden); });
+  menu.addEventListener("click", e => {
+    const b = e.target.closest("[data-theme]"); if (!b) return;
+    e.stopPropagation();
+    document.documentElement.setAttribute("data-style", b.dataset.theme);
+    try { localStorage.setItem("ps-theme", b.dataset.theme); } catch (err) {}
+    try { if (tg && tg.setHeaderColor) { const t = THEMES.find(x => x.key === b.dataset.theme); tg.setHeaderColor(t.b); tg.setBackgroundColor(t.b); } } catch (err) {}
+    open(false); paint(); haptic(); playIntro();
+  });
+  document.addEventListener("click", e => { if (!menu.hidden && !menu.contains(e.target) && e.target !== btn) open(false); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") open(false); });
 })();
 </script>
 

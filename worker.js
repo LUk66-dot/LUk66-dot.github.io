@@ -113,7 +113,7 @@ async function handleOrder(request, env) {
 
   // 2) Contrôle du contenu
   const items = (Array.isArray(body.items) ? body.items : []).slice(0, 30)
-    .map(i => ({ name: str(i.name, 80), qty: clamp(parseInt(i.qty, 10) || 0, 0, 999), price: money(i.price) }))
+    .map(i => ({ name: str(i.name, 80), qty: clamp(Math.round((parseFloat(i.qty) || 0) * 1000) / 1000, 0, 999), label: str(i.label, 40), price: money(i.price) }))
     .filter(i => i.name && i.qty > 0);
   if (!items.length) return json({ ok: false, error: "bad" }, 400);
   const mode = body.mode === "pickup" || body.mode === "delivery" ? body.mode : "";
@@ -145,7 +145,7 @@ async function handleOrder(request, env) {
     `🛒 <b>Nouvelle commande ${num}</b>`,
     `👤 ${who}`,
     "",
-    ...items.map(i => `• ${i.qty} × ${esc(i.name)} — ${eur(i.price)}`),
+    ...items.map(i => i.label ? `• ${esc(i.name)} — ${esc(i.label)} — ${eur(i.price)}` : `• ${String(i.qty).replace(".", ",")} × ${esc(i.name)} — ${eur(i.price)}`),
     "",
     `💶 <b>Total : ${eur(total)}</b>` + (disc > 0 ? ` (parrainage −${eur(disc)}, code ${esc(ref)})` : ""),
   ];
