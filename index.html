@@ -10,7 +10,16 @@
 window.PS_CONFIG = {
 
   // Adresse de ton serveur Cloudflare (entre les guillemets)
-  SERVER_URL: "https://panier-street.luk114063.workers.dev",
+  SERVER_URL: "",
+
+  // Retrait sur place : adresse, horaires (heures pleines) et temps de préparation
+  PICKUP_ADDRESS: "4 Rue des 4 buissons, 38230 Tignieu-Jameyzieu",
+  OPEN_HOUR: 10,
+  CLOSE_HOUR: 20,
+  PREP_MINUTES: 30,
+
+  // Livraison : départements livrés (les 2 premiers chiffres du code postal)
+  DELIVERY_DEPARTMENTS: ["38", "69", "01"],
 
   // Les boutons de catégories (« Tout » est ajouté automatiquement)
   CATEGORIES: ["Maison", "Mode"],
@@ -30,8 +39,8 @@ window.PS_CONFIG = {
      id    : un numéro unique par produit (ne réutilise jamais un ancien numéro)
      L'ordre de la liste = l'ordre d'affichage.                                  */
   PRODUCTS: [
-    { id: 2, name: "Jaune", cat: "Maison",
-      prix: { 2: 19.99, 5: 37.99 }, unite: "grammes",
+    { id: 2, name: "Friteuse sans huile 5,5 L", cat: "Maison",
+      prix: { 1: 19.99, 2: 37.99 }, unite: "friteuse(s)",
       image: "", emoji: "🍟", video: "" },
 
     { id: 3, name: "Baskets running légères", cat: "Mode",
@@ -39,7 +48,7 @@ window.PS_CONFIG = {
       image: "", emoji: "👟", video: "" },
 
     { id: 6, name: "Lot de 3 bougies parfumées", cat: "Maison",
-      prix: { 1: 9.99, 3: 27.99, 5: 44.99 }, unite: "grammes",
+      prix: { 1: 9.99, 3: 27.99, 5: 44.99 }, unite: "lot(s)",
       image: "", emoji: "🕯️", video: "" },
 
     { id: 7, name: "Doudoune légère déperlante", cat: "Mode",
@@ -463,6 +472,7 @@ header{padding-block:8px 8px;gap:8px}
 .closedbar span{font-size:.78rem;color:var(--ink);opacity:.85}
 .thumb{overflow:hidden}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.hint.deliv{background:var(--chip);border-radius:8px;padding:7px 10px;color:var(--ink)}
 </style>
 <style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
@@ -758,12 +768,23 @@ function checkoutArea(total){
 }
 // ===== Retrait sur place / Livraison =====
 const SHOP = {
-  address: "Adresse du point de retrait (à remplacer)",
+  address: "4 Rue des 4 buissons, 38230 Tignieu-Jameyzieu",
   open: 10, close: 20,   // horaires d'ouverture (10 h – 20 h)
   prepMin: 30,           // temps de préparation minimum, en minutes
-  stepMin: 15            // un créneau toutes les 15 minutes
+  stepMin: 15,           // un créneau toutes les 15 minutes
+  deliveryDepts: ["38", "69", "01"]   // départements livrés (2 premiers chiffres du code postal)
 };
-state.order = {mode:"", slot:"", addr:"", tel:"", err:{}};
+// Réglages venant du haut de index.html (PS_CONFIG), s'ils existent
+(function(){
+  const c = window.PS_CONFIG || {};
+  if (c.PICKUP_ADDRESS) SHOP.address = String(c.PICKUP_ADDRESS);
+  if (Number.isFinite(+c.OPEN_HOUR) && c.OPEN_HOUR !== "") SHOP.open = +c.OPEN_HOUR;
+  if (Number.isFinite(+c.CLOSE_HOUR) && c.CLOSE_HOUR !== "") SHOP.close = +c.CLOSE_HOUR;
+  if (Number.isFinite(+c.PREP_MINUTES) && c.PREP_MINUTES !== "") SHOP.prepMin = +c.PREP_MINUTES;
+  if (Array.isArray(c.DELIVERY_DEPARTMENTS)) SHOP.deliveryDepts = c.DELIVERY_DEPARTMENTS.map(d => String(d).padStart(2, "0"));
+})();
+const deptList = () => SHOP.deliveryDepts.join(", ").replace(/, ([^,]*)$/, " et $1");
+state.order = {mode:"", slot:"", addr:"", cp:"", tel:"", err:{}};
 const hhmm = d => d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
 function slots(){
   const out=[], now=new Date(), earliest=new Date(now.getTime()+SHOP.prepMin*60e3);
@@ -782,7 +803,7 @@ function orderForm(total){
   const groups=slots();
   const pick = `<fieldset class="modes"><legend>Comment veux-tu récupérer ta commande ?</legend>
     <label class="mode${o.mode==="pickup"?" on":""}"><input type="radio" name="mode" id="mode-pickup" value="pickup" ${o.mode==="pickup"?"checked":""}><span class="mi" aria-hidden="true">🏪</span><b>Retrait sur place</b><small>Gratuit · prêt à l'heure choisie</small></label>
-    <label class="mode${o.mode==="delivery"?" on":""}"><input type="radio" name="mode" id="mode-delivery" value="delivery" ${o.mode==="delivery"?"checked":""}><span class="mi" aria-hidden="true">🛵</span><b>Livraison</b><small>On t'appelle pour la livraison</small></label>
+    <label class="mode${o.mode==="delivery"?" on":""}"><input type="radio" name="mode" id="mode-delivery" value="delivery" ${o.mode==="delivery"?"checked":""}><span class="mi" aria-hidden="true">🛵</span><b>Livraison</b><small>${SHOP.deliveryDepts.length ? "Dans le " + deptList() : "On t'appelle pour la livraison"}</small></label>
   </fieldset>${err.mode?`<p class="err">${err.mode}</p>`:""}`;
   let fields="";
   if(o.mode==="pickup"){
@@ -796,8 +817,11 @@ function orderForm(total){
       <p class="hint">Préparation minimum ${SHOP.prepMin} min · ouvert de ${SHOP.open} h à ${SHOP.close} h</p>
       <p class="hint">📍 ${SHOP.address}</p>${err.slot?`<p class="err">${err.slot}</p>`:""}</div>`;
   } else if(o.mode==="delivery"){
-    fields = `<div class="field"><label for="addr">Adresse de livraison</label>
-      <textarea id="addr" data-of="addr" rows="2" autocomplete="street-address" placeholder="Numéro, rue, code postal, ville">${o.addr.replace(/</g,"&lt;")}</textarea>${err.addr?`<p class="err">${err.addr}</p>`:""}</div>
+    fields = `${SHOP.deliveryDepts.length ? `<p class="hint deliv">🛵 Livraison uniquement dans le <b>${deptList()}</b></p>` : ""}
+      <div class="field"><label for="addr">Adresse de livraison</label>
+      <textarea id="addr" data-of="addr" rows="2" autocomplete="street-address" placeholder="Numéro, rue et ville">${o.addr.replace(/</g,"&lt;")}</textarea>${err.addr?`<p class="err">${err.addr}</p>`:""}</div>
+      <div class="field"><label for="cp">Code postal</label>
+      <input id="cp" data-of="cp" inputmode="numeric" autocomplete="postal-code" maxlength="5" placeholder="38230" value="${o.cp.replace(/"/g,"&quot;")}">${err.cp?`<p class="err">${err.cp}</p>`:""}</div>
       <div class="field"><label for="tel">Numéro de téléphone</label>
       <input id="tel" data-of="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="06 12 34 56 78" value="${o.tel.replace(/"/g,"&quot;")}">${err.tel?`<p class="err">${err.tel}</p>`:""}</div>`;
   }
@@ -806,6 +830,7 @@ function orderForm(total){
     <button class="btn big" type="submit" id="confirm">Valider la commande · ${eur(total)}</button>
     <button class="link" type="button" id="cancel">Retour au panier</button></form>`;
 }
+const fullAddr = o => o.mode==="delivery" ? `${o.addr.trim()}, ${(o.cp||"").replace(/\s/g,"")}` : "";
 function validateOrder(){
   const o=state.order, err={};
   if(!o.mode) err.mode="Choisis le retrait sur place ou la livraison.";
@@ -814,7 +839,11 @@ function validateOrder(){
     else if(+o.slot < Date.now()+SHOP.prepMin*60e3 - 60e3) err.slot="Ce créneau est trop proche, choisis-en un plus tard.";
   }
   if(o.mode==="delivery"){
-    if(o.addr.trim().length<8) err.addr="Indique ton adresse complète (rue, code postal, ville).";
+    if(o.addr.trim().length<6) err.addr="Indique ton adresse complète (numéro, rue et ville).";
+    const cp=(o.cp||"").replace(/\s/g,"");
+    if(!/^\d{5}$/.test(cp)) err.cp="Indique un code postal à 5 chiffres, par exemple 38230.";
+    else if(SHOP.deliveryDepts.length && !SHOP.deliveryDepts.includes(cp.slice(0,2)))
+      err.cp=`Désolé, on livre uniquement dans le ${deptList()}. Tu peux choisir le retrait sur place.`;
     const digits=o.tel.replace(/[^\d+]/g,"");
     if(!/^(\+33\d{9}|0\d{9})$/.test(digits)) err.tel="Indique un numéro valide, par exemple 06 12 34 56 78.";
   }
@@ -834,7 +863,7 @@ document.addEventListener("submit", async e=>{
   const o=state.order;
   const items = Object.entries(state.cart).map(([id,q])=>{ const d=DEALS.find(x=>x.id===+id); return d && {id:d.id, name:d.name, qty:q, price:priceFor(d,q)}; }).filter(Boolean);
   const payload = {initData: (tg && tg.initData) || "", items, total:state._total, disc:state._disc||0, ref: state._disc ? state.refApplied : "",
-    mode:o.mode, slot:o.slot, addr:o.addr.trim(), tel:o.tel.trim()};
+    mode:o.mode, slot:o.slot, addr:fullAddr(o), tel:o.tel.trim()};
   const fail = msg => { state.sending=false; state.order.err={general:msg}; render(); const f=document.querySelector(".err"); if(f) f.scrollIntoView({block:"center",behavior:"smooth"}); };
   let num;
   if(SERVER_URL){
@@ -856,11 +885,11 @@ document.addEventListener("submit", async e=>{
     num = "PS-" + String(Date.now()).slice(-5);
   }
   {
-    state.lastOrder = {num, mode:o.mode, slot:o.slot, addr:o.addr.trim(), tel:o.tel.trim(), total:state._total, disc:state._disc||0, ref:state._disc?state.refApplied:""};
+    state.lastOrder = {num, mode:o.mode, slot:o.slot, addr:fullAddr(o), tel:o.tel.trim(), total:state._total, disc:state._disc||0, ref:state._disc?state.refApplied:""};
     if(state._disc){ refSet("bpc-ref-used","1"); state.refApplied=""; }
     refSet("bpc-first-done","1");
     logOrder(); state.sending=false; state.confirm=false; state.cart={}; saveCart();
-    state.order={mode:"", slot:"", addr:"", tel:"", err:{}}; state.ordered=true; haptic(); render(); window.scrollTo(0,0);
+    state.order={mode:"", slot:"", addr:"", cp:"", tel:"", err:{}}; state.ordered=true; haptic(); render(); window.scrollTo(0,0);
   }
 });
 
