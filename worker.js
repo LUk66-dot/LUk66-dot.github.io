@@ -8,6 +8,9 @@
 //    WEBAPP_URL     l'adresse de ta boutique : https://xxxx.github.io/...
 //    APP_LINK       le lien de ta Mini App : https://t.me/TonBot/boutique
 //    CHANNEL        ton canal : @nomducanal, ou -100... pour un canal privé
+//    ORDERS_CHAT_ID (facultatif) le groupe privé où arrivent les commandes.
+//                   Tape /groupe dans le groupe : le bot te donne la valeur.
+//                   Sans cette variable, les commandes arrivent dans ta conversation.
 //  Une liaison KV nommée RL.
 //  Un déclencheur Cron toutes les 5 minutes (*/5 * * * *) : il publie les
 //  posts programmés et supprime les messages clients au bout de 24 h.
@@ -172,8 +175,13 @@ function checkConfig(env) {
     ["CHANNEL", !!env.CHANNEL],
     ["RL (liaison KV)", !!env.RL],
   ];
-  return rows.map(([k, ok]) => `${ok ? "✅" : "❌"} ${k}`).join("\n");
+  return rows.map(([k, ok]) => `${ok ? "✅" : "❌"} ${k}`).join("\n") +
+    `\n${env.ORDERS_CHAT_ID ? "✅" : "➖"} ORDERS_CHAT_ID (groupe des commandes, facultatif)`;
 }
+
+// Où arrivent les commandes : le groupe des commandes s'il est réglé, sinon ta conversation
+const ordersChat = env => env.ORDERS_CHAT_ID || env.ADMIN_CHAT_ID;
+const isOrdersGroup = (env, chatId) => !!env.ORDERS_CHAT_ID && String(chatId) === String(env.ORDERS_CHAT_ID);
 
 // ---------- Ouverture / fermeture de la boutique ----------
 async function isOpen(env) {
@@ -273,7 +281,7 @@ async function handleOrder(request, env) {
   lines.push("", "💬 <i>Réponds à ce message pour écrire au client.</i>");
 
   const sent = await tg(env, "sendMessage", {
-    chat_id: env.ADMIN_CHAT_ID,
+    chat_id: ordersChat(env),
     text: lines.join("\n"),
     parse_mode: "HTML",
     reply_markup: { inline_keyboard: [[
@@ -363,7 +371,7 @@ async function handleAccount(request, env) {
       }
     }
     if (env.ADMIN_CHAT_ID)
-      await tg(env, "sendMessage", { chat_id: env.ADMIN_CHAT_ID, text: `👤 Nouveau compte : ${name}${user.username ? " (@" + user.username + ")" : ""}${referredBy ? " · parrainé" : ""}` });
+      await tg(env, "sendMessage", { chat_id: ordersChat(env), text: `👤 Nouveau compte : ${name}${user.username ? " (@" + user.username + ")" : ""}${referredBy ? " · parrainé" : ""}` });
     return json({ ok: true, account: publicAcct(acct, env) });
   }
 
@@ -406,7 +414,9 @@ async function handleWebhook(request, env) {
 }
 
 async function onMessage(m, env, origin) {
-  if (!m.chat || m.chat.type !== "private" || !m.from) return;
+  if (!m.chat || !m.from) return;
+  if (m.chat.type === "group" || m.chat.type === "supergroup") { await onGroupMessage(m, env); return; }
+  if (m.chat.type !== "private") return;
   const chat_id = m.chat.id;
   const msg = m.text || m.caption || "";
   const isAdmin = env.ADMIN_CHAT_ID && String(m.from.id) === String(env.ADMIN_CHAT_ID);
@@ -590,24 +600,7 @@ async function onMessage(m, env, origin) {
     return;
   }
 
-  if (msg.startsWith("/commandes")) {
-    if (!env.RL) return;
-    const dayStart = startOfDay(Date.now());
-    const orders = (await listAll(env, "ord:")).filter(k => Number(k.name.split(":")[1]) >= dayStart);
-    if (!orders.length) { await tg(env, "sendMessage", { chat_id, text: "🛒 Aucune commande aujourd'hui pour l'instant." }); return; }
-    let sum = 0;
-    const rows = orders.slice(-50).map(k => {
-      const [, ts, num] = k.name.split(":"), md = k.metadata || {};
-      sum += md.t || 0;
-      return `• ${hour(Number(ts))} · <b>${esc(num)}</b> · ${esc(md.n || "")} · ${eur(md.t || 0)} · ` +
-        (md.m === "pickup" ? `🏪 ${md.s ? hour(md.s) : ""}` : "🛵");
-    });
-    await tg(env, "sendMessage", {
-      chat_id, parse_mode: "HTML",
-      text: `🛒 <b>Commandes du jour</b> (${orders.length})\n\n${rows.join("\n")}\n\n💶 Total : <b>${eur(sum)}</b>`,
-    });
-    return;
-  }
+  if (msg.startsWith("/commandes")) { await sendOrdersOfDay(env, chat_id); return; }
 
   if (msg.startsWith("/nettoyer")) {
     const n = await cleanup(env);
@@ -639,7 +632,8 @@ async function onMessage(m, env, origin) {
         "📊 <b>/sondage Question | Choix 1 | Choix 2</b> : sondage dans le canal.\n" +
         "👋 <b>/bienvenue</b> : choisis et publie un message de bienvenue (ou <code>/bienvenue 3</code> pour le n°3 direct).\n\n" +
         "📈 <b>/stats</b> : abonnés, commandes et chiffre du jour et de la semaine.\n" +
-        "🛒 <b>/commandes</b> : la liste des commandes du jour.\n" +
+        "🛒 <b>/commandes</b> : la liste des commandes du jour (marche aussi dans le groupe des commandes).\n" +
+        "👥 <b>/groupe</b> : à taper dans ton groupe des commandes pour avoir son identifiant.\n" +
         "ℹ️ <b>/statut</b> : boutique ouverte ou fermée ?\n" +
         "🩺 <b>/status</b> : bilan complet, vérifie que le bot, le canal, la boutique et le serveur vont bien.\n" +
         "🧹 <b>/nettoyer</b> : supprime les messages clients de plus de 24 h (automatique toutes les heures).\n\n" +
@@ -651,6 +645,61 @@ async function onMessage(m, env, origin) {
   }
 
   await tg(env, "sendMessage", { chat_id, text: "Commande inconnue. Tape « / » pour voir le menu, ou envoie /aide." });
+}
+
+async function sendOrdersOfDay(env, chat_id) {
+  if (!env.RL) return;
+  const dayStart = startOfDay(Date.now());
+  const orders = (await listAll(env, "ord:")).filter(k => Number(k.name.split(":")[1]) >= dayStart);
+  if (!orders.length) { await tg(env, "sendMessage", { chat_id, text: "🛒 Aucune commande aujourd'hui pour l'instant." }); return; }
+  let sum = 0;
+  const rows = orders.slice(-50).map(k => {
+    const [, ts, num] = k.name.split(":"), md = k.metadata || {};
+    sum += md.t || 0;
+    return `• ${hour(Number(ts))} · <b>${esc(num)}</b> · ${esc(md.n || "")} · ${eur(md.t || 0)} · ` +
+      (md.m === "pickup" ? `🏪 ${md.s ? hour(md.s) : ""}` : "🛵");
+  });
+  await tg(env, "sendMessage", {
+    chat_id, parse_mode: "HTML",
+    text: `🛒 <b>Commandes du jour</b> (${orders.length})\n\n${rows.join("\n")}\n\n💶 Total : <b>${eur(sum)}</b>`,
+  });
+}
+
+// ---------- Messages dans un groupe (groupe des commandes) ----------
+async function onGroupMessage(m, env) {
+  const chat_id = m.chat.id;
+  const msg = m.text || m.caption || "";
+  const isAdmin = env.ADMIN_CHAT_ID && String(m.from.id) === String(env.ADMIN_CHAT_ID);
+
+  // /groupe : donne l'identifiant du groupe pour le régler dans Cloudflare
+  if (/^\/(groupe|id)(@\w+)?(\s|$)/.test(msg)) {
+    if (!isAdmin) return;
+    await tg(env, "sendMessage", {
+      chat_id, parse_mode: "HTML",
+      text: isOrdersGroup(env, chat_id)
+        ? "✅ Ce groupe est bien ton <b>groupe des commandes</b>."
+        : `🛒 <b>Groupe des commandes</b>\n\nIdentifiant de ce groupe : <code>${chat_id}</code>\n\nMets-le dans la variable <b>ORDERS_CHAT_ID</b> sur Cloudflare, puis Déployer. Les commandes arriveront ici.`,
+    });
+    return;
+  }
+  if (!isOrdersGroup(env, chat_id)) return;
+
+  // /commandes dans le groupe : la liste du jour
+  if (/^\/commandes(@\w+)?(\s|$)/.test(msg)) { await sendOrdersOfDay(env, chat_id); return; }
+
+  // Réponse à une commande → message au client
+  if (m.reply_to_message && !msg.startsWith("/") && env.RL) {
+    const customer = await env.RL.get("map:" + m.reply_to_message.message_id);
+    if (!customer) return;
+    const body = "💬 Message de Panier de la Street :\n\n";
+    const r = m.photo
+      ? await sendToCustomer(env, "sendPhoto", { chat_id: customer, photo: m.photo[m.photo.length - 1].file_id, caption: body + (m.caption || "") })
+      : await sendToCustomer(env, "sendMessage", { chat_id: customer, text: body + msg });
+    await tg(env, "sendMessage", {
+      chat_id, reply_to_message_id: m.message_id,
+      text: r.ok ? "✅ Message envoyé au client." : "❌ Message non envoyé : le client n'a pas autorisé le bot à lui écrire. Contacte-le directement.",
+    });
+  }
 }
 
 async function askContent(env, chat_id, label, extra) {
@@ -757,6 +806,10 @@ async function healthReport(env, origin) {
       "vérifie le déclencheur Cron (*/5 * * * *) dans Paramètres → Déclencheurs");
   }
   if (!env.ADMIN_CHAT_ID) line(false, "ADMIN_CHAT_ID non réglé");
+  if (env.ORDERS_CHAT_ID) {
+    const g = await tg(env, "getChat", { chat_id: env.ORDERS_CHAT_ID });
+    line(g.ok, g.ok ? `Groupe des commandes « ${esc(g.result.title || "")} » relié` : "Groupe des commandes introuvable", "ajoute le bot au groupe et vérifie ORDERS_CHAT_ID (tape /groupe dans le groupe)");
+  } else ok.push("➖ Pas de groupe des commandes : elles arrivent ici");
   ok.push((await isOpen(env)) ? "🟢 Commandes ouvertes" : "🔴 Commandes fermées (/enligne pour ouvrir)");
 
   const head = bad.length ? `⚠️ <b>${bad.length} point${bad.length > 1 ? "s" : ""} à vérifier</b>` : "✅ <b>Tout est OK</b>";
@@ -766,8 +819,11 @@ async function healthReport(env, origin) {
 // ---------- Boutons ----------
 async function onButton(cq, env) {
   const answer = (t, alert) => tg(env, "answerCallbackQuery", { callback_query_id: cq.id, text: t, show_alert: !!alert });
-  if (!env.ADMIN_CHAT_ID || String(cq.from.id) !== String(env.ADMIN_CHAT_ID)) { await answer(); return; }
   const p = String(cq.data || "").split(":");
+  const fromAdmin = !!env.ADMIN_CHAT_ID && String(cq.from.id) === String(env.ADMIN_CHAT_ID);
+  // Boutons Prête / Annuler : toi, ou un membre du groupe des commandes
+  const orderButton = (p[0] === "ok" || p[0] === "no") && cq.message && isOrdersGroup(env, cq.message.chat.id);
+  if (!fromAdmin && !orderButton) { await answer(); return; }
   const msgRef = cq.message ? { chat_id: cq.message.chat.id, message_id: cq.message.message_id } : null;
   const appendToMessage = async (line, keep) => {
     if (!msgRef) return;
@@ -828,7 +884,8 @@ async function onButton(cq, env) {
     return;
   }
   const r = await sendToCustomer(env, "sendMessage", { chat_id: customer, text: toCustomer });
-  await appendToMessage(label + (r.ok ? " · client prévenu" : " · client non prévenu (il n'a pas autorisé le bot)"));
+  const by = cq.message && isOrdersGroup(env, cq.message.chat.id) && cq.from.first_name ? ` par ${cq.from.first_name}` : "";
+  await appendToMessage(label + by + (r.ok ? " · client prévenu" : " · client non prévenu (il n'a pas autorisé le bot)"));
   await answer(label);
 }
 
