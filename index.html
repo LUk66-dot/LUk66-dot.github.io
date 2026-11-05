@@ -12,7 +12,7 @@ window.PS_CONFIG = {
   // Adresse de ton serveur Cloudflare (entre les guillemets)
   SERVER_URL: "https://panier-street.luk114063.workers.dev",
 
-  // Thème par défaut : "neon", "jaune", "graffiti", "beton" ou "rouge"
+  // Thème par défaut : "neon", "braise", "graffiti" ou "jaune"
   THEME: "neon",
   // Laisser les clients changer de thème avec le rond en haut à droite : true ou false
   THEME_PICKER: true,
@@ -121,29 +121,22 @@ Quantités :
 
 
 
-
-
-
-
-
-
 <script>
 (function(){
-  var map = {neon:"street-neon", jaune:"street", graffiti:"street-graff", beton:"street-clair", rouge:"street-rouge"};
+  var map = {neon:"street-neon", braise:"street-rouge", rouge:"street-rouge", graffiti:"street-graff", jaune:"street"};
   var c = window.PS_CONFIG || {}, pick = map[String(c.THEME || "neon").toLowerCase()] || "street-neon";
   try { var saved = localStorage.getItem("ps-theme"); if (c.THEME_PICKER !== false && saved && Object.values(map).indexOf(saved) > -1) pick = saved; } catch(e){}
   document.documentElement.setAttribute("data-style", pick);
 })();
 </script>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Archivo:wght@400;500;700&family=Anton&family=Permanent+Marker&family=Bebas+Neue&family=Oswald:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Archivo:wght@400;500;700&family=Anton&family=Permanent+Marker&family=Oswald:wght@500;700&display=swap">
 <style>
 /* Layout: one-column Mini App — sticky header with search + category chips, deal feed of "price tag" cards, bottom tab bar */
 :root{
   --bg:#f3f5f9; --surface:#ffffff; --ink:#141a2e; --muted:#5d6680; --line:#e1e5ee;
   --tag:#ff5a3c; --tag-ink:#ffffff; --danger:#d92d3a; --danger-bg:#fdecee; --hot:#ffd23f; --ok:#1f9d6b; --chip:#e9edf5;
   --display:"Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
-  --body:"DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-}
+  --body:"DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0f1320; --surface:#181e30; --ink:#eef1f8; --muted:#97a0ba; --line:#262e45;
   --tag:#ff6b4f; --tag-ink:#1a0d08; --danger:#ff5c6a; --danger-bg:#3a1a22; --hot:#ffd23f; --ok:#3ccf93; --chip:#222a40; color-scheme:dark}}
@@ -154,25 +147,15 @@ Quantités :
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 .wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 96px}
-header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:14px 10px;display:grid;gap:12px}
-.brand{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.logo{font-family:var(--display);font-weight:800;font-size:1.45rem;letter-spacing:-.02em;margin:0;display:flex;align-items:center;gap:8px}
-.logo .dot{font-size:1.2rem;line-height:1}
 .search{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0 12px}
-.search input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font:inherit;padding:11px 0;outline:none}
 .search:focus-within{border-color:var(--tag)}
 .chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-inline:-4px;padding-inline:4px}
 .chips::-webkit-scrollbar{display:none}
-.chip{flex:none;border:0;background:var(--chip);color:var(--ink);font:500 .88rem var(--body);padding:7px 13px;border-radius:99px;cursor:pointer}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .chip:focus-visible,.btn:focus-visible,.fav:focus-visible,.tab:focus-visible{outline:2px solid var(--tag);outline-offset:2px}
 .meta{display:flex;justify-content:space-between;align-items:baseline;color:var(--muted);font-size:.85rem;margin:6px 0 10px}
 .meta select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:4px 6px}
-.feed{display:grid;gap:12px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;grid-template-columns:84px 1fr;gap:12px;position:relative}
-.thumb{width:84px;height:84px;border-radius:12px;display:grid;place-items:center;font-size:2.4rem;background:var(--chip)}
 .info{min-width:0;display:grid;gap:4px;align-content:start}
-.name{font-weight:700;margin:0;font-size:.98rem;padding-right:34px;text-wrap:balance}
 .now{font-family:var(--display);font-weight:800;font-size:1.3rem;font-variant-numeric:tabular-nums}
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
 .btn{border:0;background:var(--ink);color:var(--bg);font:700 .85rem var(--body);padding:8px 14px;border-radius:10px;cursor:pointer;text-decoration:none}
@@ -184,7 +167,6 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var
 .code p{margin:0;color:var(--muted);font-size:.88rem}
 h2.sec{font-family:var(--display);font-weight:800;font-size:1.2rem;margin:4px 0 10px}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
-.tab{flex:1;max-width:186px;border:0;background:none;color:var(--muted);font:500 .78rem var(--body);padding:9px 4px 10px;cursor:pointer;display:grid;justify-items:center;gap:2px}
 .tab b{font-size:1.15rem;font-weight:400}
 .tab[aria-selected="true"]{color:var(--tag)}
 .toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:99px;font-size:.88rem;opacity:0;transition:opacity .2s;pointer-events:none;z-index:7}
@@ -203,14 +185,9 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surfa
 .btn:disabled{opacity:.55;cursor:not-allowed}
 .limit{justify-content:center!important;gap:6px;background:var(--danger-bg);border-radius:8px;padding:6px 10px;font-size:.85rem;font-weight:700;color:var(--danger)}
 .note{margin:0;color:var(--muted);font-size:.85rem;text-align:center}
-.qtysel{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background-color:var(--chip);color:var(--ink);border-radius:10px;
-  font:500 .88rem var(--body);padding:7px 30px 7px 12px;cursor:pointer;
-  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
-  background-position:right 15px center,right 10px center;background-size:5px 5px;background-repeat:no-repeat}
 .qtysel.on{background-color:var(--tag);border-color:var(--tag);color:var(--tag-ink);font-weight:700}
 .qtysel:focus-visible{outline:2px solid var(--tag);outline-offset:2px}
 .qtysel option{color:var(--ink);background:var(--surface)}
-.trash{width:34px;height:34px;border-radius:10px;border:1px solid var(--danger);background:var(--danger-bg);color:var(--danger);display:grid;place-items:center;cursor:pointer;padding:0}
 .trash:hover{background:var(--danger);color:var(--surface)}
 .trash:focus-visible{outline:2px solid var(--danger);outline-offset:2px}
 .presets button:focus-visible{outline:2px solid var(--tag);outline-offset:1px}
@@ -255,60 +232,45 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surfa
 .recap b{text-align:right;min-width:0;overflow-wrap:anywhere}
 .recap .rt{border-top:1px solid var(--line);padding-top:8px;font-family:var(--display);font-size:1.1rem}
 @media (max-width:360px){.modes{grid-template-columns:1fr}}
-.contact{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);
-  padding:5px 10px 5px 6px;border-radius:99px;font-size:.82rem;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
-.contact .ci{width:22px;height:22px;border-radius:50%;background:var(--ok);display:grid;place-items:center;font-size:.75rem}
 .contact:focus-visible{outline:2px solid var(--tag);outline-offset:2px}
-.brand{flex-wrap:wrap}
-.brand{justify-content:flex-start;gap:8px 10px}
-.contact{padding:3px 8px 3px 4px;font-size:.7rem;gap:4px}
-.contact .ci{width:16px;height:16px;font-size:.55rem}
-.brand{flex-wrap:nowrap;min-width:0}
-.logo{font-size:clamp(1rem,5.2vw,1.45rem);white-space:nowrap;gap:5px;min-width:0}
-.logo .dot{font-size:.85em}
-.contact{flex:none}
-.qtyline{margin-top:6px}
-.row.bottom{margin-top:10px;align-items:center}
-.row.bottom .now{font-size:1.2rem}
-.addbtn{background:var(--tag);color:var(--tag-ink);margin-left:auto}
+.contact .ci{border-radius:50%;background:var(--ok);display:grid;place-items:center;width:16px;height:16px;font-size:.55rem}
+.logo .dot{line-height:1;font-size:.85em}
+.contact{display:inline-flex;align-items:center;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:99px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;padding:3px 8px 3px 4px;font-size:.7rem;gap:4px;flex:none}
 .addbtn.done-add{background:var(--chip);color:var(--ok)}
 .qtyline.bad .qtysel{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger) inset}
 .info .err{margin-top:4px}
 .qtysel option.opt-cancel{color:var(--danger);font-weight:700}
 /* En-tête centré + encart contact */
 .brand{justify-content:center!important}
-.logo{font-size:clamp(1.25rem,6.2vw,1.6rem)!important;justify-content:center}
-.contactbox{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:9px 10px;display:grid;gap:7px;text-align:center}
-.contactbox p{margin:0;font-size:.8rem;color:var(--muted);text-wrap:balance}
 .contacts{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
-.contactbox .contact{padding:4px 10px 4px 4px;font-size:.78rem;gap:6px;background:var(--bg)}
 .contactbox .contact > span:last-child{display:grid;text-align:left;line-height:1.15}
 .contactbox .contact small{font-size:.62rem;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-.contactbox .ci{width:24px;height:24px;font-size:.8rem}
 .contact.snap .ci{background:var(--hot)}
 /* En-tête compact : seul le bloc recherche + catégories reste collé en haut */
 .top{display:grid;gap:6px;padding-block:10px 2px}
-.logo{font-size:clamp(1.1rem,5.4vw,1.35rem)!important}
-.contactbox{padding:6px 8px;gap:5px;border-radius:10px}
-.contactbox p{font-size:.7rem;line-height:1.3}
-.contactbox .contact{padding:2px 8px 2px 3px;font-size:.72rem;gap:4px}
+.logo{font-family:var(--display);font-weight:800;font-size:1.45rem;letter-spacing:-.02em;margin:0;display:flex;align-items:center;font-size:clamp(1rem,5.2vw,1.45rem);white-space:nowrap;gap:5px;min-width:0;font-size:clamp(1.25rem,6.2vw,1.6rem)!important;justify-content:center;font-size:clamp(1.1rem,5.4vw,1.35rem)!important}
+.contactbox{background:var(--surface);border:1px solid var(--line);display:grid;text-align:center;padding:6px 8px;gap:5px;border-radius:10px}
+.contactbox p{margin:0;color:var(--muted);text-wrap:balance;font-size:.7rem;line-height:1.3}
+.contactbox .contact{background:var(--bg);padding:2px 8px 2px 3px;font-size:.72rem;gap:4px}
 .contactbox .ci{width:18px;height:18px;font-size:.6rem}
-header{padding-block:8px 8px;gap:8px}
-.search input{padding:8px 0}
-.chip{padding:5px 12px;font-size:.84rem}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:grid;padding-block:8px 8px;gap:8px}
+.search input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font:inherit;outline:none;padding:8px 0}
+.chip{flex:none;border:0;background:var(--chip);color:var(--ink);font:500 .88rem var(--body);border-radius:99px;cursor:pointer;padding:5px 12px;font-size:.84rem}
 /* Fiches produit plus compactes */
 .card{grid-template-columns:68px 1fr;gap:10px;padding:10px;border-radius:14px}
-.thumb{width:68px;height:68px;font-size:2rem;border-radius:10px}
-.name{font-size:.92rem}
+.name{font-weight:700;margin:0;padding-right:34px;text-wrap:balance;font-size:.92rem}
 .qtyline{margin-top:4px}
-.row.bottom{margin-top:6px;flex-wrap:nowrap}
+.row.bottom{align-items:center;margin-top:6px;flex-wrap:nowrap}
 .row.bottom .now{font-size:1.05rem}
-.addbtn{padding:7px 12px;white-space:nowrap}
-.qtysel{padding:5px 28px 5px 10px;font-size:.82rem}
-.trash{width:30px;height:30px}
-.feed{gap:10px}
+.addbtn{background:var(--tag);color:var(--tag-ink);margin-left:auto;padding:7px 12px;white-space:nowrap}
+.qtysel{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background-color:var(--chip);color:var(--ink);border-radius:10px;
+  font:500 .88rem var(--body);cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:right 15px center,right 10px center;background-size:5px 5px;background-repeat:no-repeat;padding:5px 28px 5px 10px;font-size:.82rem}
+.trash{border-radius:10px;border:1px solid var(--danger);background:var(--danger-bg);color:var(--danger);display:grid;place-items:center;cursor:pointer;padding:0;width:30px;height:30px}
+.feed{display:grid;gap:10px}
 /* ===== Styles au choix (aperçu) ===== */
-/* Street : béton sombre, jaune signalisation, titres condensés */
+/* Jaune : fond sombre, jaune signalisation, titres condensés */
 :root[data-style="street"]{
   --bg:#1c1d20; --surface:#26282c; --ink:#f4f4f2; --muted:#a3a6ad; --line:#383b41; --chip:#31343a;
   --tag:#ffd400; --tag-ink:#1c1d20; --hot:#ffd400; --ok:#4ad295; --danger:#ff5d5d; --danger-bg:#3b2224;
@@ -317,9 +279,6 @@ header{padding-block:8px 8px;gap:8px}
 :root[data-style^="street"] .card{border-radius:6px}
 :root[data-style^="street"] .thumb{border-radius:4px}
 :root[data-style^="street"] .btn,:root[data-style^="street"] .qtysel,:root[data-style^="street"] .chip{border-radius:4px}
-/* Douceur : pêche et rose, formes arrondies */
-/* Luxe : vert profond et or, titres à empattements */
-/* Frais : menthe et vert d'eau, net et aéré */
 /* Street · Graffiti : mur sombre, rose fluo, titre façon tag */
 :root[data-style="street-graff"]{
   --bg:#18161c; --surface:#231f2a; --ink:#f6f2f8; --muted:#a69cb0; --line:#3a3343; --chip:#2e2836;
@@ -332,15 +291,6 @@ header{padding-block:8px 8px;gap:8px}
   --tag:#29e0ff; --tag-ink:#06111f; --hot:#ff4fd8; --ok:#43f0b0; --danger:#ff5d7a; --danger-bg:#3a1d2c;
   --display:"Bungee", Impact, sans-serif; --body:"Archivo", system-ui, sans-serif; color-scheme:dark}
 :root[data-style="street-neon"] .addbtn,:root[data-style="street-neon"] .btn.big{box-shadow:0 0 14px rgba(41,224,255,.45)}
-:root[data-style="street-neon"] .card{border-color:#2a3a60}
-/* Street · Béton clair : gris ciment, noir, orange chantier */
-:root[data-style="street-clair"]{
-  --bg:#e4e3df; --surface:#f2f1ee; --ink:#151515; --muted:#5f5e5a; --line:#c9c7c1; --chip:#d6d4cf;
-  --tag:#ff6a13; --tag-ink:#151515; --hot:#ffd400; --ok:#1d8a5a; --danger:#d42a2a; --danger-bg:#f6dddd;
-  --display:"Bebas Neue", Impact, "Arial Narrow", sans-serif; --body:"Archivo", system-ui, sans-serif; color-scheme:light}
-:root[data-style="street-clair"] .logo{font-size:clamp(1.2rem,6vw,1.6rem)!important;letter-spacing:.04em}
-:root[data-style="street-clair"] .card{border:2px solid var(--ink);box-shadow:4px 4px 0 var(--ink)}
-:root[data-style="street-clair"] .addbtn{border:2px solid var(--ink)}
 /* Street · Rouge : noir mat, rouge vif, typo affiche */
 :root[data-style="street-rouge"]{
   --bg:#141212; --surface:#1e1b1b; --ink:#f7f3f2; --muted:#a8a0a0; --line:#352f2f; --chip:#2a2525;
@@ -435,11 +385,11 @@ header{padding-block:8px 8px;gap:8px}
 /* Parrainage */
 .refcode{display:flex;gap:8px;align-items:center}
 .refcode span{flex:1;font-family:var(--display);font-size:1.4rem;letter-spacing:.08em;color:var(--tag);user-select:all}
-.tab{max-width:140px}
+.tab{flex:1;border:0;background:none;color:var(--muted);font:500 .78rem var(--body);padding:9px 4px 10px;cursor:pointer;display:grid;justify-items:center;gap:2px;max-width:140px}
 .closedbar{display:grid;gap:2px;text-align:center;background:var(--danger-bg);border:1px solid var(--danger);color:var(--danger);border-radius:10px;padding:8px 10px}
 .closedbar b{font-size:.92rem}
 .closedbar span{font-size:.78rem;color:var(--ink);opacity:.85}
-.thumb{overflow:hidden}
+.thumb{display:grid;place-items:center;background:var(--chip);width:68px;height:68px;font-size:2rem;border-radius:10px;overflow:hidden}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .hint.deliv{background:var(--chip);border-radius:8px;padding:7px 10px;color:var(--ink)}
 .paynote,.summary>.paynote{display:flex;align-items:center;justify-content:center!important;gap:6px;background:var(--chip);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:.88rem;font-weight:700;color:var(--ink);text-align:center}
@@ -468,7 +418,7 @@ header{padding-block:8px 8px;gap:8px}
 .feebox .ft{border-top:1px solid var(--line);padding-top:6px;font-family:var(--display);font-size:1.05rem}
 /* ===== Rond de choix du thème ===== */
 .top{position:relative}
-.brand{padding-inline:40px}
+.brand{display:flex;align-items:center;justify-content:flex-start;gap:8px 10px;flex-wrap:nowrap;min-width:0;padding-inline:40px}
 .themebtn{position:absolute;right:0;top:10px;width:32px;height:32px;border-radius:50%;border:2px solid var(--line);background:var(--surface);padding:3px;cursor:pointer;z-index:6}
 .themebtn span{display:block;width:100%;height:100%;border-radius:50%}
 .themebtn:focus-visible{outline:2px solid var(--tag);outline-offset:2px}
@@ -479,7 +429,7 @@ header{padding-block:8px 8px;gap:8px}
 .thememenu button b{margin-left:auto;color:var(--tag)}
 .thememenu i{width:20px;height:20px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(127,127,127,.4)}
 /* ===== Animations de lancement par thème ===== */
-.i-tape,.i-splats,.i-blocks,.i-bars{display:none;position:absolute;inset:0;pointer-events:none}
+.i-tape,.i-splats,.i-bars{display:none;position:absolute;inset:0;pointer-events:none}
 /* Jaune : rubans de chantier + lettres qui tombent */
 :root[data-style="street"] .i-grid,:root[data-style="street"] .i-scan,:root[data-style="street"] .i-sparks{display:none}
 :root[data-style="street"] .i-sky{background:radial-gradient(60% 45% at 50% 55%,rgba(255,212,0,.16),transparent 70%)}
@@ -508,22 +458,6 @@ header{padding-block:8px 8px;gap:8px}
 :root[data-style="street-graff"] .i-title span{opacity:0;animation:spray .6s ease-out var(--t) both}
 :root[data-style="street-graff"] .i-title span.hl{color:var(--hot)}
 @keyframes spray{0%{opacity:0;filter:blur(12px);transform:scale(1.5)}60%{opacity:1;filter:blur(2px)}100%{opacity:1;filter:none;transform:none}}
-/* Béton clair : blocs façon affiche + lettres tamponnées */
-:root[data-style="street-clair"] .i-grid,:root[data-style="street-clair"] .i-scan,:root[data-style="street-clair"] .i-sparks{display:none}
-:root[data-style="street-clair"] .i-sky{background:none}
-:root[data-style="street-clair"] .i-blocks{display:block}
-:root[data-style="street-clair"] .i-blocks i{position:absolute;height:22%;animation:blockIn .6s cubic-bezier(.2,.9,.3,1) both}
-:root[data-style="street-clair"] .i-blocks i:nth-child(1){left:0;top:8%;width:62%;background:#151515;--from:-110%}
-:root[data-style="street-clair"] .i-blocks i:nth-child(2){right:0;bottom:10%;width:55%;background:var(--tag);--from:110%;animation-delay:.2s}
-:root[data-style="street-clair"] .i-blocks i:nth-child(3){left:12%;bottom:4%;width:30%;height:6%;background:#151515;--from:-150%;animation-delay:.35s}
-@keyframes blockIn{from{translate:var(--from) 0}to{translate:0 0}}
-:root[data-style="street-clair"] .i-logo svg{filter:drop-shadow(3px 3px 0 var(--tag))}
-:root[data-style="street-clair"] .i-logo path,:root[data-style="street-clair"] .i-logo circle{stroke:var(--ink)}
-:root[data-style="street-clair"] .i-center{background:var(--bg);border:3px solid var(--ink);box-shadow:8px 8px 0 var(--ink);padding:22px 20px;margin:0 16px}
-:root[data-style="street-clair"] .i-title{color:var(--ink);font-size:clamp(1.8rem,10vw,3rem)}
-:root[data-style="street-clair"] .i-title span{opacity:0;animation:stamp .35s cubic-bezier(.2,1.7,.4,1) var(--t) both}
-:root[data-style="street-clair"] .i-title span.hl{color:var(--tag);text-shadow:2px 2px 0 var(--ink)}
-@keyframes stamp{from{opacity:0;transform:scale(3) rotate(-14deg)}to{opacity:1;transform:none}}
 /* Rouge : bandes de cinéma + titre qui monte */
 :root[data-style="street-rouge"] .i-grid,:root[data-style="street-rouge"] .i-scan,:root[data-style="street-rouge"] .i-sparks,:root[data-style="street-rouge"] .i-floats{display:none}
 :root[data-style="street-rouge"] .i-sky{background:radial-gradient(50% 35% at 50% 50%,rgba(232,32,42,.22),transparent 70%)}
@@ -535,9 +469,8 @@ header{padding-block:8px 8px;gap:8px}
 :root[data-style="street-rouge"] .i-logo svg{filter:drop-shadow(0 0 10px rgba(232,32,42,.6))}
 :root[data-style="street-rouge"] .i-title{color:var(--ink);letter-spacing:.06em}
 :root[data-style="street-rouge"] .i-title span{opacity:0;animation:rise .7s cubic-bezier(.2,.9,.3,1) var(--t) both}
-:root[data-style="street-rouge"] .i-title span.hl{color:var(--tag)}
 @keyframes rise{from{opacity:0;transform:translateY(28px);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
-@media (prefers-reduced-motion:reduce){.i-tape i,.i-splats b,.i-blocks i,.i-bars i{animation:none!important}
+@media (prefers-reduced-motion:reduce){.i-tape i,.i-splats b,.i-bars i{animation:none!important}
 :root[data-style] .i-title span{animation:none!important;opacity:1!important}}
 .acct{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
 .acct-av{width:56px;height:56px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--tag);color:var(--tag-ink);font-family:var(--display);font-size:1.5rem}
@@ -567,6 +500,67 @@ header{padding-block:8px 8px;gap:8px}
 .giftpick:hover,.giftpick:focus-visible{border-color:var(--hot);outline:none}
 .giftpick .thumb{width:44px;height:44px;font-size:1.4rem}
 .giftline{border-color:var(--hot)}
+/* ================= THÈMES (retravaillés) ================= */
+/* Base commune : titre en dégradé, boutons qui brillent, cartes qui ressortent */
+:root{--grad:linear-gradient(90deg,var(--tag),var(--hot));--glow:rgba(41,224,255,.45)}
+.logo .lt{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;background-size:200% 100%;animation:titleFlow 6s linear infinite}
+@keyframes titleFlow{to{background-position:200% 0}}
+.addbtn,.btn.big{position:relative;overflow:hidden;isolation:isolate}
+.addbtn::after,.btn.big::after{content:"";position:absolute;inset:-2px;z-index:-1;pointer-events:none;
+  background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);transform:translateX(-120%);animation:btnShine 3.6s ease-in-out infinite}
+@keyframes btnShine{0%,55%{transform:translateX(-120%)}80%,100%{transform:translateX(120%)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;grid-template-columns:84px 1fr;gap:12px;position:relative;transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease}
+nav.tabs .tab[aria-selected="true"] b{filter:drop-shadow(0 0 6px var(--glow))}
+/* Néon : cyan électrique qui pulse */
+:root[data-style="street-neon"]{--grad:linear-gradient(90deg,#29e0ff,#7cf0ff,#ff4fd8,#29e0ff);--glow:rgba(41,224,255,.55)}
+:root[data-style="street-neon"] .logo .lt{filter:drop-shadow(0 0 8px rgba(41,224,255,.55))}
+:root[data-style="street-neon"] .card{border-color:#2a3a60;box-shadow:inset 0 0 0 1px rgba(41,224,255,.08),0 0 18px -12px rgba(41,224,255,.9)}
+/* Braise : feu rouge-orangé */
+:root[data-style="street-rouge"]{
+  --bg:#120707; --surface:#1e0d0b; --ink:#fff1ea; --muted:#c9a59a; --line:#3a1d17; --chip:#2a1410;
+  --tag:#ff3b1f; --tag-ink:#ffffff; --hot:#ffb020; --ok:#7fe0a0; --danger:#ff6060; --danger-bg:#3a1712;
+  --grad:linear-gradient(90deg,#ff3b1f,#ff8a00,#ffd23f,#ff3b1f); --glow:rgba(255,90,30,.6)}
+:root[data-style="street-rouge"] body{background:radial-gradient(140% 50% at 50% 115%,rgba(255,80,20,.22),transparent 60%),var(--bg);background-attachment:fixed}
+:root[data-style="street-rouge"] .addbtn,:root[data-style="street-rouge"] .btn.big{background:linear-gradient(135deg,#ff3b1f,#ff8a00);color:#fff;box-shadow:0 6px 18px -8px rgba(255,90,30,.8)}
+:root[data-style="street-rouge"] .now{color:var(--hot)}
+/* Graffiti : rose fluo + cyan, mur de street art */
+:root[data-style="street-graff"]{--grad:linear-gradient(90deg,#ff3fa4,#ffd23f,#7cf0ff,#ff3fa4);--glow:rgba(255,63,164,.55)}
+:root[data-style="street-graff"] body{background:radial-gradient(60% 40% at 90% 10%,rgba(124,240,255,.10),transparent 70%),radial-gradient(60% 40% at 10% 90%,rgba(255,63,164,.12),transparent 70%),var(--bg);background-attachment:fixed}
+:root[data-style="street-graff"] .logo .lt{text-transform:none;filter:drop-shadow(2px 2px 0 #000)}
+:root[data-style="street-graff"] .addbtn{background:linear-gradient(135deg,#ff3fa4,#ff7a3f);color:#fff;transform:rotate(-1.5deg)}
+/* Jaune : ruban de chantier */
+:root[data-style="street"]{--grad:linear-gradient(90deg,#ffd400,#fff3a0,#ffd400);--glow:rgba(255,212,0,.5)}
+:root[data-style="street"] .top::after{content:"";display:block;height:8px;margin-top:6px;border-radius:2px;background:repeating-linear-gradient(-45deg,#ffd400 0 12px,#151515 12px 24px);animation:tapeRun 1.6s linear infinite}
+:root[data-style="street"] .addbtn{box-shadow:3px 3px 0 #000}
+/* Braise : braises qui montent derrière les bandes de cinéma */
+:root[data-style="street-rouge"] .i-floats{display:block}
+:root[data-style="street-rouge"] .i-floats span{font-size:0!important;width:6px;height:6px;border-radius:50%;background:#ff8a00;box-shadow:0 0 10px #ff3b1f,0 0 20px #ff8a00}
+:root[data-style="street-rouge"] .i-title span.hl{background:linear-gradient(90deg,#ff3b1f,#ffd23f);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+@media (prefers-reduced-motion:reduce){
+  .logo .lt,.addbtn::after,.btn.big::after,:root[data-style] .addbtn,:root[data-style] .btn.big{animation:none!important}
+  .card:hover{transform:none}
+}
+/* ===== Entrée animée des produits (tous les thèmes) ===== */
+.feed.enter > .card{animation:cardIn .5s cubic-bezier(.2,.9,.3,1) backwards}
+.feed.enter > .card:nth-child(2){animation-delay:.06s}
+.feed.enter > .card:nth-child(3){animation-delay:.12s}
+.feed.enter > .card:nth-child(4){animation-delay:.18s}
+.feed.enter > .card:nth-child(5){animation-delay:.24s}
+.feed.enter > .card:nth-child(n+6){animation-delay:.3s}
+@keyframes cardIn{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
+/* ===== ASPHALTE : route, marquages au sol{
+  --bg:#1b1c1e; --surface:#26272a; --ink:#f3f3f0; --muted:#a6a7a2; --line:#3a3b3e; --chip:#2f3033;
+  --tag:#ffffff; --tag-ink:#151515; --hot:#ffd23f; --ok:#7fe0a0; --danger:#ff6a5a; --danger-bg:#3a2220;
+  --display:"Black Ops One", "Anton", Impact, sans-serif; --body:"Archivo", system-ui, sans-serif;
+  --grad:linear-gradient(90deg,#ffffff,#ffd23f,#ffffff); --glow:rgba(255,255,255,.35); color-scheme:dark}
+/* Lancement Asphalte : la route défile vers toi{display:none}
+@media (prefers-reduced-motion:reduce){
+  .feed.enter > .card{animation:none!important}
+}
+/* Effets de survol seulement sur ordinateur (sur iPhone, ils gênaient le menu Quantité) */
+@media (hover:hover) and (pointer:fine){
+.card:hover{transform:translateY(-2px);border-color:var(--tag);box-shadow:0 8px 24px -10px var(--glow)}
+}
 </style>
 <style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
@@ -580,7 +574,6 @@ header{padding-block:8px 8px;gap:8px}
   <div class="i-scan" aria-hidden="true"></div>
   <div class="i-tape" aria-hidden="true"><i></i><i></i></div>
   <div class="i-splats" aria-hidden="true"><b style="left:84%;top:40%;--s:105px;--c:var(--tag);--dl:0.20s"></b><b style="left:72%;top:11%;--s:119px;--c:var(--hot);--dl:0.38s"></b><b style="left:36%;top:14%;--s:80px;--c:#7cf0ff;--dl:0.56s"></b><b style="left:19%;top:55%;--s:120px;--c:var(--tag);--dl:0.74s"></b><b style="left:36%;top:56%;--s:129px;--c:var(--hot);--dl:0.92s"></b><b style="left:18%;top:39%;--s:61px;--c:#ffffff;--dl:1.10s"></b><b style="left:32%;top:60%;--s:95px;--c:var(--tag);--dl:1.28s"></b></div>
-  <div class="i-blocks" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="i-bars" aria-hidden="true"><i></i><i></i></div>
   <div class="i-center">
     <div class="i-logo" aria-hidden="true">
@@ -599,7 +592,7 @@ header{padding-block:8px 8px;gap:8px}
     <button class="themebtn" id="themeBtn" aria-label="Changer de thème" aria-haspopup="true" aria-expanded="false"><span></span></button>
     <div class="thememenu" id="themeMenu" role="menu" hidden></div>
     <div class="brand">
-      <h1 class="logo"><span class="dot" aria-hidden="true">🛒</span>Panier de la Street<span class="dot" aria-hidden="true">🛒</span></h1>
+      <h1 class="logo"><span class="dot" aria-hidden="true">🛒</span><span class="lt">Panier de la Street</span><span class="dot" aria-hidden="true">🛒</span></h1>
     </div>
     <div class="closedbar" id="closedbar" role="status" hidden><b>🔴 Boutique fermée</b><span>Les commandes sont fermées pour le moment. Reviens plus tard !</span></div>
     <div class="contactbox">
@@ -701,7 +694,7 @@ if (tg) { tg.ready(); tg.expand(); try{ tg.setHeaderColor("#0d1424"); tg.setBack
 // ===== Une seule boutique ouverte à la fois =====
 // Chaque appui sur « Commander » peut ouvrir un nouvel onglet Telegram. Chaque onglet s'annonce
 // (au téléphone et au serveur) ; les plus anciens voient qu'un onglet plus récent existe et se ferment.
-const APP_VERSION = "2026.11.05-c";
+const APP_VERSION = "2026.11.05-d";
 (function(){
   if (!tg || !tg.close) return;
   const me = Date.now() + "-" + Math.random().toString(36).slice(2, 8);
@@ -822,7 +815,9 @@ function render(){
   const empty = state.tab==="favs"
     ? `<p class="empty">Aucun favori pour l'instant.<br>Touche le ♥ d'une offre pour la retrouver ici.</p>`
     : `<p class="empty">Aucune offre ne correspond. Essaie un autre mot ou une autre catégorie.</p>`;
-  v.innerHTML = head + (list.length ? `<div class="feed">${list.map(dealCard).join("")}</div>` : empty);
+  const animKey = state.tab + "|" + state.cat + "|" + state.sort;
+  const enter = state._lastAnim !== animKey; state._lastAnim = animKey;
+  v.innerHTML = head + (list.length ? `<div class="feed${enter ? " enter" : ""}">${list.map(dealCard).join("")}</div>` : empty);
   $("#sort").value = state.sort;
 }
 
@@ -1158,7 +1153,7 @@ function validateOrder(){
   }
   o.err=err; return !Object.keys(err).length;
 }
-document.addEventListener("input", e=>{ const k=e.target.dataset && e.target.dataset.of; if(k==="refInput"){ state.refInput=e.target.value; return; } if(k && k!=="slot"){ state.order[k]=e.target.value; } });
+document.addEventListener("input", e=>{ const k=e.target.dataset && e.target.dataset.of; if(k && k!=="slot"){ state.order[k]=e.target.value; } });
 document.addEventListener("change", e=>{
   if(e.target.name==="mode"){ state.order.mode=e.target.value; state.order.err={}; render(); }
   else if(e.target.dataset && e.target.dataset.of==="slot"){ state.order.slot=e.target.value; if(state.order.err) delete state.order.err.slot; }
@@ -1258,7 +1253,6 @@ document.addEventListener("change", e=>{
   }
 });
 $("#q").addEventListener("input", e=>{ state.q=e.target.value.trim().toLowerCase(); render(); });
-
 
 function copyText(txt, okMsg){
   const fallback = ()=>{ toast("Appui long sur le texte pour le copier"); };
@@ -1381,7 +1375,6 @@ $("#vclose").addEventListener("click", closeVideo);
 $("#vmodal").addEventListener("click", e=>{ if(e.target.id==="vmodal") closeVideo(); });
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && !$("#vmodal").hidden) closeVideo(); });
 
-
 // Écran de bienvenue : toucher pour passer, puis retrait du DOM
 // ===== Animation de lancement (rejouée quand on change de thème) =====
 const INTRO_HTML = (document.getElementById("splash") || {}).outerHTML || "";
@@ -1400,12 +1393,12 @@ wireIntro(document.getElementById("splash"));
 
 // ===== Choix du thème (rond en haut à droite) =====
 const THEMES = [
-  {key:"street-neon",  name:"Néon",        a:"#29e0ff", b:"#0d1424"},
-  {key:"street",       name:"Jaune",       a:"#ffd400", b:"#1c1d20"},
-  {key:"street-graff", name:"Graffiti",    a:"#ff3fa4", b:"#18161c"},
-  {key:"street-clair", name:"Béton clair", a:"#ff6a13", b:"#e4e3df"},
-  {key:"street-rouge", name:"Rouge",       a:"#e8202a", b:"#141212"},
+  {key:"street-neon",  name:"Néon",     a:"#29e0ff", b:"#0d1424"},
+  {key:"street-rouge", name:"Braise",   a:"linear-gradient(135deg,#ff3b1f,#ff8a00,#ffd23f)", b:"#120707"},
+  {key:"street-graff", name:"Graffiti", a:"linear-gradient(135deg,#ff3fa4,#7cf0ff)", b:"#18161c"},
+  {key:"street",       name:"Jaune",    a:"#ffd400", b:"#1c1d20"},
 ];
+const swatch = t => t.a.includes("gradient") ? `conic-gradient(from 0deg, ${t.b} 0 50%, transparent 0), ${t.a}` : `conic-gradient(${t.a} 0 50%, ${t.b} 0)`;
 (function(){
   const btn = document.getElementById("themeBtn"), menu = document.getElementById("themeMenu");
   if (!btn || !menu) return;
@@ -1413,9 +1406,9 @@ const THEMES = [
   const cur = () => document.documentElement.getAttribute("data-style");
   const paint = () => {
     const t = THEMES.find(x => x.key === cur()) || THEMES[0];
-    btn.firstElementChild.style.background = `conic-gradient(${t.a} 0 50%, ${t.b} 0)`;
+    btn.firstElementChild.style.background = swatch(t);
     menu.innerHTML = `<p class="tmh">Choisis ton thème</p>` + THEMES.map(x =>
-      `<button role="menuitemradio" aria-checked="${x.key===cur()}" data-theme="${x.key}"><i style="background:conic-gradient(${x.a} 0 50%, ${x.b} 0)"></i>${x.name}${x.key===cur()?' <b>✓</b>':''}</button>`).join("");
+      `<button role="menuitemradio" aria-checked="${x.key===cur()}" data-theme="${x.key}"><i style="background:${swatch(x)}"></i>${x.name}${x.key===cur()?' <b>✓</b>':''}</button>`).join("");
   };
   const open = v => { menu.hidden = !v; btn.setAttribute("aria-expanded", v); };
   paint();
