@@ -64,14 +64,14 @@ window.PS_CONFIG = {
      ================================================ */
   PRODUITS: `
 
-Produit : Jaune mousseux
+Produit : Friteuse sans huile 5,5 L
 Catégorie : Maison
 Photo :
 Vidéo :
 Emoji : 🍟
 Quantités :
-  2,5 grammes = 10
-  5 grammes = 20
+  1 friteuse = 19,99
+  2 friteuses = 37,99
 
 Produit : Baskets running légères
 Catégorie : Mode
@@ -117,6 +117,7 @@ Quantités :
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <title>Panier de la Street</title>
+
 
 
 
@@ -698,21 +699,33 @@ const SERVER_URL = ((window.PS_CONFIG && window.PS_CONFIG.SERVER_URL) || "").tri
 if (tg) { tg.ready(); tg.expand(); try{ tg.setHeaderColor("#0d1424"); tg.setBackgroundColor("#0d1424"); }catch(e){} }
 
 // ===== Une seule boutique ouverte à la fois =====
-// Si le client appuie plusieurs fois sur « Commander », Telegram peut ouvrir la boutique en double.
-// Chaque nouvelle ouverture prévient les anciennes, qui se ferment toutes seules (le panier est gardé).
+// Chaque appui sur « Commander » peut ouvrir un nouvel onglet Telegram. Chaque onglet s'annonce
+// (au téléphone et au serveur) ; les plus anciens voient qu'un onglet plus récent existe et se ferment.
+const APP_VERSION = "2026.11.05-c";
 (function(){
   if (!tg || !tg.close) return;
   const me = Date.now() + "-" + Math.random().toString(36).slice(2, 8);
-  const closeIfOlder = other => { if (other && other !== me && other > me) { try { tg.close(); } catch (e) {} } };
-  try {
-    const bc = new BroadcastChannel("ps-boutique");
-    bc.onmessage = e => closeIfOlder(e.data);
-    bc.postMessage(me);
-  } catch (e) {}
-  try {
-    window.addEventListener("storage", e => { if (e.key === "ps-instance") closeIfOlder(e.newValue); });
-    localStorage.setItem("ps-instance", me);
-  } catch (e) {}
+  let closed = false;
+  const closeMe = () => { if (closed) return; closed = true; try { tg.close(); } catch (e) {} };
+  const newer = other => other && other !== me && other > me;
+  // 1) sur le téléphone (immédiat quand Telegram partage la mémoire entre onglets)
+  try { const bc = new BroadcastChannel("ps-boutique"); bc.onmessage = e => { if (newer(e.data)) closeMe(); }; bc.postMessage(me); } catch (e) {}
+  try { localStorage.setItem("ps-instance", me); } catch (e) {}
+  const localCheck = () => { try { if (newer(localStorage.getItem("ps-instance"))) closeMe(); } catch (e) {} };
+  // 2) par le serveur (marche même si chaque onglet a sa propre mémoire)
+  const serverCall = async action => {
+    if (!SERVER_URL || !tg.initData) return null;
+    try {
+      const r = await fetch(SERVER_URL + "/instance", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ initData: tg.initData, id: me, action }) });
+      const j = await r.json(); return j && j.latest;
+    } catch (e) { return null; }
+  };
+  serverCall("hello");
+  const check = async () => { if (closed || document.hidden) return; localCheck(); if (newer(await serverCall("check"))) closeMe(); };
+  setInterval(localCheck, 1500);
+  setInterval(check, 5000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+  window.addEventListener("focus", check);
 })();
 
 const state = {tab:"deals", cat:"Tout", q:"", sort:"recent", favs:new Set(), cart:{}, ordered:false};
@@ -900,7 +913,8 @@ function renderAccount(v){
     </div>
     <p class="hint">Un parrainage est validé quand ton ami crée son compte avec ton code <b>et passe sa première commande</b>. Tous les ${goal} parrainages validés : <b>1 article au choix offert</b>.</p>
   </div>
-  ${d.demo ? `<p class="hint" style="text-align:center">Aperçu : compte et chiffres d'exemple.</p>` : ""}`;
+  ${d.demo ? `<p class="hint" style="text-align:center">Aperçu : compte et chiffres d'exemple.</p>` : ""}
+  <p class="hint" style="text-align:center;opacity:.6">Version ${APP_VERSION}</p>`;
   v.innerHTML = html;
 }
 document.addEventListener("submit", async e => {

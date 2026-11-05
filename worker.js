@@ -136,6 +136,7 @@ export default {
     try {
       if (url.pathname === "/order" && request.method === "POST") return cors(await handleOrder(request, env));
       if (url.pathname === "/account" && request.method === "POST") return cors(await handleAccount(request, env));
+      if (url.pathname === "/instance" && request.method === "POST") return cors(await handleInstance(request, env));
       if (url.pathname === "/webhook" && request.method === "POST") return await handleWebhook(request, env);
       if (url.pathname === "/setup") return await setup(url, env);
       if (url.pathname === "/status") return cors(json({ ok: true, open: await isOpen(env) }));
@@ -312,6 +313,22 @@ async function handleOrder(request, env) {
   }).catch(() => {});
 
   return json({ ok: true, num });
+}
+
+// ---------- Une seule boutique ouverte par client ----------
+// Chaque onglet de la boutique s'annonce ; les onglets plus anciens se ferment d'eux-mêmes.
+async function handleInstance(request, env) {
+  if (!env.BOT_TOKEN || !env.RL) return json({ ok: false });
+  const body = await request.json().catch(() => null);
+  const user = body && await verifyInitData(String(body.initData || ""), env.BOT_TOKEN);
+  if (!user || !user.id) return json({ ok: false }, 401);
+  const key = "inst:" + user.id, id = str(body.id, 40);
+  let latest = await env.RL.get(key);
+  if (body.action === "hello" && id && (!latest || id > latest)) {
+    await env.RL.put(key, id, { expirationTtl: 6 * 3600 });
+    latest = id;
+  }
+  return json({ ok: true, latest: latest || "" });
 }
 
 // ---------- Compte client et parrainage ----------
@@ -769,6 +786,8 @@ async function healthReport(env, origin) {
         const srv = m ? m[1].trim().replace(/\/+$/, "") : "";
         line(srv === origin, srv === origin ? "Boutique reliée à ce serveur" : srv ? `La boutique pointe vers un autre serveur (${esc(srv)})` : "SERVER_URL vide dans la boutique : les commandes ne partent pas",
           `mets SERVER_URL: "${origin}" en haut d'index.html`);
+        const v = (html.match(/APP_VERSION = "([^"]+)"/) || [])[1];
+        if (v) ok.push(`🏷 Version de la boutique en ligne : ${esc(v)}`);
         const n = (html.match(/^\s*Produit\s*:/gim) || []).length;
         line(n > 0, n > 0 ? `${n} produit${n > 1 ? "s" : ""} dans la boutique` : "Aucun produit trouvé dans la boutique", "vérifie tes fiches « Produit : » en haut d'index.html");
       }
