@@ -4,10 +4,53 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script>
-  /* ====== RÉGLAGE : colle ici l'adresse de ton serveur Cloudflare, entre les guillemets ======
-     Exemple : SERVER_URL: "https://panier-street.tonpseudo.workers.dev"
-     Laisse vide ("") pour le mode aperçu (les commandes ne partent nulle part). */
-  window.PS_CONFIG = { SERVER_URL: "https://panier-street.luk114063.workers.dev" };
+/* =====================================================================
+   RÉGLAGES DE TA BOUTIQUE : tout ce que tu modifies souvent est ici
+   ===================================================================== */
+window.PS_CONFIG = {
+
+  // Adresse de ton serveur Cloudflare (entre les guillemets)
+  SERVER_URL: "https://panier-street.luk114063.workers.dev",
+
+  // Les boutons de catégories (« Tout » est ajouté automatiquement)
+  CATEGORIES: ["Maison", "Mode"],
+
+  /* ---------- TES PRODUITS ----------
+     Un produit = un bloc entre { et },
+     name  : le nom affiché
+     cat   : la catégorie (écrite exactement comme dans CATEGORIES)
+     prix  : les QUANTITÉS proposées pour ce produit et leur prix TOTAL
+             ex : { 1: 10, 3: 25, 5: 40 } → le menu propose 1, 3 ou 5
+             (prix avec un point : 19.99)
+     unite : le mot affiché après le nombre, propre à CE produit (ex : "paire(s)")
+             laisse "" pour afficher « Qté 1, Qté 2… »
+     image : le nom de ta photo envoyée sur GitHub (ex : "friteuse.jpg"), ou "" pour l'émoji
+     emoji : affiché si pas de photo
+     video : le nom de ta vidéo (ex : "friteuse.mp4"), ou "" s'il n'y en a pas
+     id    : un numéro unique par produit (ne réutilise jamais un ancien numéro)
+     L'ordre de la liste = l'ordre d'affichage.                                  */
+  PRODUCTS: [
+    { id: 2, name: "Jaune", cat: "Maison",
+      prix: { 2.5: 19.99, 5: 37.99 }, unite: "g",
+      image: "", emoji: "🍟", video: "" },
+
+    { id: 3, name: "Baskets running légères", cat: "Mode",
+      prix: { 1: 19.99, 2: 35.99 }, unite: "paire(s)",
+      image: "", emoji: "👟", video: "" },
+
+    { id: 6, name: "Lot de 3 bougies parfumées", cat: "Maison",
+      prix: { 1: 9.99, 3: 27.99, 5: 44.99 }, unite: "lot(s)",
+      image: "", emoji: "🕯️", video: "" },
+
+    { id: 7, name: "Doudoune légère déperlante", cat: "Mode",
+      prix: { 1: 19.99, 2: 40.99 }, unite: "",
+      image: "", emoji: "🧥", video: "" },
+
+    { id: 9, name: "Aspirateur robot avec cartographie", cat: "Maison",
+      prix: { 1: 19.99, 2: 40.99, 3: 59.99 }, unite: "",
+      image: "", emoji: "🤖", video: "" },
+  ],
+};
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <title>Panier de la Street</title>
@@ -418,6 +461,8 @@ header{padding-block:8px 8px;gap:8px}
 .closedbar{display:grid;gap:2px;text-align:center;background:var(--danger-bg);border:1px solid var(--danger);color:var(--danger);border-radius:10px;padding:8px 10px}
 .closedbar b{font-size:.92rem}
 .closedbar span{font-size:.78rem;color:var(--ink);opacity:.85}
+.thumb{overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
 </style>
 <style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
@@ -512,6 +557,35 @@ const CODES = [
 ];
 const CATS = ["Tout","Maison","Mode"];
 
+// ===== Produits et catégories réglés en haut de index.html (PS_CONFIG) =====
+(function(){
+  const cfg = window.PS_CONFIG || {};
+  if (Array.isArray(cfg.PRODUCTS) && cfg.PRODUCTS.length) {
+    DEALS.length = 0;
+    cfg.PRODUCTS.forEach((p, i) => {
+      if (!p || !p.name) return;
+      DEALS.push({
+        id: Number(p.id) || i + 1,
+        name: String(p.name),
+        cat: p.cat || "",
+        emoji: p.emoji || "🛍️",
+        image: p.image || "",
+        min: i,                       // ordre « Plus récents » = ordre de la liste
+        prix: p.prix || { 1: 0 },
+        video: p.video || "",
+        unite: p.unite || ""
+      });
+    });
+  }
+  if (Array.isArray(cfg.CATEGORIES) && cfg.CATEGORIES.length) {
+    CATS.length = 0;
+    CATS.push("Tout", ...cfg.CATEGORIES.map(String));
+  }
+})();
+const thumbHTML = d => d.image
+  ? `<img src="${String(d.image).replace(/"/g,"&quot;")}" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('${d.emoji}'))">`
+  : d.emoji;
+
 // ===== Intégration Telegram (active seulement une fois ouverte dans Telegram) =====
 const tg = window.Telegram && window.Telegram.WebApp;
 // Adresse du serveur des commandes : réglée tout en haut du fichier index.html (PS_CONFIG). Vide = mode aperçu.
@@ -540,7 +614,13 @@ function renderChips(){
 }
 
 // Quantités : le bouton affiche la quantité (0 au départ) ; un appui ouvre une liste verticale qui défile
-const QTYS = [1,2,3,4,5]; // quantité maximum : 5
+// Quantités proposées : celles qui ont un prix dans « prix » pour chaque produit
+function qtysFor(d, cur){
+  const q = Object.keys((d && d.prix) || {1:0}).map(Number).filter(n => Number.isInteger(n) && n > 0);
+  if (cur && !q.includes(cur)) q.push(cur);
+  return [...new Set(q)].sort((a,b) => a - b);
+}
+const qtyLabel = (d, n) => d && d.unite ? `${n} ${d.unite}` : `Qté ${n}`;
 const TRASH = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>`;
 state.pick = {}; // quantité choisie sur la fiche, pas encore ajoutée au panier
 function presets(id, card){
@@ -549,7 +629,7 @@ function presets(id, card){
   // Menu natif du téléphone, comme le tri « Plus récents / Prix croissant »
   const sel = `<select class="qtysel${cur ? " on" : ""}" id="qty-${state.tab}-${id}" ${card ? `data-pick="${id}"` : `data-qty="${id}"`} aria-label="Quantité">
       ${cur ? "" : `<option value="" selected disabled hidden>Quantité</option>`}
-      ${QTYS.map(n=>`<option value="${n}" ${cur===n ? "selected" : ""}>Qté ${n}</option>`).join("")}
+      ${(()=>{ const d = DEALS.find(x=>x.id===id); return qtysFor(d, cur).map(n=>`<option value="${n}" ${cur===n ? "selected" : ""}>${qtyLabel(d, n)}</option>`).join(""); })()}
       <option value="cancel" class="opt-cancel">Annuler</option>
     </select>`;
   const trash = inCart ? `<button class="trash" data-set="${id}:0" aria-label="Retirer du panier">${TRASH}</button>` : "";
@@ -569,7 +649,7 @@ function addBtn(id){
 
 function dealCard(d){
   return `<article class="card">
-    <div class="thumb" aria-hidden="true">${d.emoji}</div>
+    <div class="thumb" aria-hidden="true">${thumbHTML(d)}</div>
     <div class="info">
       <h3 class="name">${d.name}</h3>
       <div class="qtyline${state.qtyErr===d.id ? " bad" : ""}">${presets(d.id, true)}</div>
@@ -638,7 +718,7 @@ function renderCart(v){
   v.innerHTML = `<h2 class="sec">Mon panier · ${cartCount()} article${cartCount()>1?"s":""}</h2>
   <div class="feed">${items.map(({d,q})=>`
     <div class="line">
-      <div class="thumb sm" aria-hidden="true">${d.emoji}</div>
+      <div class="thumb sm" aria-hidden="true">${thumbHTML(d)}</div>
       <div class="info"><div class="name sm">${d.name}</div><div class="now sm">${eur(priceFor(d,q))}</div></div>
       <div class="lineqty">${presets(d.id)}</div>
     </div>`).join("")}</div>
