@@ -10,7 +10,7 @@
 window.PS_CONFIG = {
 
   // Adresse de ton serveur Cloudflare (entre les guillemets)
-  SERVER_URL: "",
+  SERVER_URL: "https://panier-street.luk114063.workers.dev",
 
   // Thème par défaut : "neon", "braise", "graffiti", "givre" ou "jaune"
   THEME: "neon",
@@ -23,8 +23,8 @@ window.PS_CONFIG = {
   // Retrait sur place : adresse, horaires (heures pleines) et temps de préparation
   PICKUP_ADDRESS: "4 Rue des 4 buissons, 38230 Tignieu-Jameyzieu",
   PICKUP_MAPS_LINK: "https://maps.app.goo.gl/a2WRT5nRgEFDpmmJ6?g_st=ic",
-  OPEN_HOUR: 10,
-  CLOSE_HOUR: 20,
+  OPEN_HOUR: 12,
+  CLOSE_HOUR: 0,
   PREP_MINUTES: 30,
 
   // Message de paiement affiché dans le panier ("" pour ne rien afficher)
@@ -120,6 +120,7 @@ Quantités :
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <title>Panier de la Street</title>
+
 
 
 
@@ -741,7 +742,7 @@ if (tg) { tg.ready(); tg.expand(); try{ tg.setHeaderColor("#0d1424"); tg.setBack
 // ===== Une seule boutique ouverte à la fois =====
 // Chaque appui sur « Commander » peut ouvrir un nouvel onglet Telegram. Chaque onglet s'annonce
 // (au téléphone et au serveur) ; les plus anciens voient qu'un onglet plus récent existe et se ferment.
-const APP_VERSION = "2026.11.05-d";
+const APP_VERSION = "2026.11.05-e";
 (function(){
   if (!tg || !tg.close) return;
   const me = Date.now() + "-" + Math.random().toString(36).slice(2, 8);
@@ -1234,6 +1235,9 @@ document.addEventListener("submit", async e=>{
       }
       num = j.num;
     }catch(err){ fail("Connexion impossible. Vérifie ta connexion internet et réessaie."); return; }
+  } else if(payload.initData){
+    // Ouverte dans Telegram mais pas reliée au serveur : on ne fait pas semblant
+    fail("La boutique n'est pas encore reliée au serveur des commandes. Préviens le vendeur (réglage SERVER_URL)."); return;
   } else {
     await new Promise(res=>setTimeout(res, 900));
     num = "PS-" + String(Date.now()).slice(-5);

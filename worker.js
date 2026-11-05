@@ -163,8 +163,32 @@ function checkConfig(env) {
 }
 
 // Où arrivent les commandes : le groupe des commandes s'il est réglé, sinon ta conversation
-const ordersChat = env => env.ORDERS_CHAT_ID || env.ADMIN_CHAT_ID;
-const isOrdersGroup = (env, chatId) => !!env.ORDERS_CHAT_ID && String(chatId) === String(env.ORDERS_CHAT_ID);
+// Si Telegram transforme le groupe en « supergroupe », son identifiant change :
+// le bot retient le nouveau tout seul (clé KV cfg:orders), plus besoin de toucher à Cloudflare.
+async function groupId(env) {
+  if (!env.ORDERS_CHAT_ID) return "";
+  const moved = env.RL ? await env.RL.get("cfg:orders:" + env.ORDERS_CHAT_ID) : null;
+  return moved || String(env.ORDERS_CHAT_ID);
+}
+const ordersChat = async env => (await groupId(env)) || env.ADMIN_CHAT_ID;
+const isOrdersGroup = async (env, chatId) => { const g = await groupId(env); return !!g && String(chatId) === g; };
+async function rememberMigration(env, newId) {
+  if (env.RL && env.ORDERS_CHAT_ID && newId) await env.RL.put("cfg:orders:" + env.ORDERS_CHAT_ID, String(newId));
+}
+// Envoi au groupe des commandes, qui suit un changement d'identifiant et, en dernier recours,
+// t'envoie le message en privé : une commande n'est jamais perdue.
+async function sendToOrders(env, body) {
+  let r = await tg(env, "sendMessage", { ...body, chat_id: await ordersChat(env) });
+  const moved = r && r.parameters && r.parameters.migrate_to_chat_id;
+  if (!r.ok && moved) { await rememberMigration(env, moved); r = await tg(env, "sendMessage", { ...body, chat_id: moved }); }
+  if (!r.ok && env.ORDERS_CHAT_ID && env.ADMIN_CHAT_ID) {
+    const why = body.parse_mode === "HTML" ? esc(r.description || "erreur inconnue") : (r.description || "erreur inconnue");
+    const note = `⚠️ Pas pu l'envoyer dans le groupe (${why}). Tape /status pour vérifier.`;
+    r = await tg(env, "sendMessage", { ...body, chat_id: env.ADMIN_CHAT_ID,
+      text: body.text + "\n\n" + (body.parse_mode === "HTML" ? `<i>${note}</i>` : note) });
+  }
+  return r;
+}
 
 // ---------- Ouverture / fermeture de la boutique ----------
 async function isOpen(env) {
@@ -263,8 +287,7 @@ async function handleOrder(request, env) {
   if (giftUsed) lines.push("🎁 Contient un article offert (10 parrainages)");
   lines.push("", "💬 <i>Réponds à ce message pour écrire au client.</i>");
 
-  const sent = await tg(env, "sendMessage", {
-    chat_id: ordersChat(env),
+  const sent = await sendToOrders(env, {
     text: lines.join("\n"),
     parse_mode: "HTML",
     reply_markup: { inline_keyboard: [[
@@ -370,7 +393,7 @@ async function handleAccount(request, env) {
       }
     }
     if (env.ADMIN_CHAT_ID)
-      await tg(env, "sendMessage", { chat_id: ordersChat(env), text: `👤 Nouveau compte : ${name}${user.username ? " (@" + user.username + ")" : ""}${referredBy ? " · parrainé" : ""}` });
+      await sendToOrders(env, { text: `👤 Nouveau compte : ${name}${user.username ? " (@" + user.username + ")" : ""}${referredBy ? " · parrainé" : ""}` });
     return json({ ok: true, account: publicAcct(acct, env) });
   }
 
@@ -414,6 +437,7 @@ async function handleWebhook(request, env) {
 
 async function onMessage(m, env, origin) {
   if (!m.chat || !m.from) return;
+  if (m.migrate_to_chat_id && env.ORDERS_CHAT_ID && String(m.chat.id) === String(env.ORDERS_CHAT_ID)) { await rememberMigration(env, m.migrate_to_chat_id); return; }
   if (m.chat.type === "group" || m.chat.type === "supergroup") { await onGroupMessage(m, env); return; }
   if (m.chat.type !== "private") return;
   const chat_id = m.chat.id;
@@ -675,13 +699,13 @@ async function onGroupMessage(m, env) {
     if (!isAdmin) return;
     await tg(env, "sendMessage", {
       chat_id, parse_mode: "HTML",
-      text: isOrdersGroup(env, chat_id)
+      text: (await isOrdersGroup(env, chat_id))
         ? "✅ Ce groupe est bien ton <b>groupe des commandes</b>."
         : `🛒 <b>Groupe des commandes</b>\n\nIdentifiant de ce groupe : <code>${chat_id}</code>\n\nMets-le dans la variable <b>ORDERS_CHAT_ID</b> sur Cloudflare, puis Déployer. Les commandes arriveront ici.`,
     });
     return;
   }
-  if (!isOrdersGroup(env, chat_id)) return;
+  if (!(await isOrdersGroup(env, chat_id))) return;
 
   // /commandes dans le groupe : la liste du jour
   if (/^\/commandes(@\w+)?(\s|$)/.test(msg)) { await sendOrdersOfDay(env, chat_id); return; }
@@ -808,7 +832,8 @@ async function healthReport(env, origin) {
   }
   if (!env.ADMIN_CHAT_ID) line(false, "ADMIN_CHAT_ID non réglé");
   if (env.ORDERS_CHAT_ID) {
-    const g = await tg(env, "getChat", { chat_id: env.ORDERS_CHAT_ID });
+    let g = await tg(env, "getChat", { chat_id: await groupId(env) });
+    if (!g.ok && g.parameters && g.parameters.migrate_to_chat_id) { await rememberMigration(env, g.parameters.migrate_to_chat_id); g = await tg(env, "getChat", { chat_id: g.parameters.migrate_to_chat_id }); }
     line(g.ok, g.ok ? `Groupe des commandes « ${esc(g.result.title || "")} » relié` : "Groupe des commandes introuvable", "ajoute le bot au groupe et vérifie ORDERS_CHAT_ID (tape /groupe dans le groupe)");
   } else ok.push("➖ Pas de groupe des commandes : elles arrivent ici");
   ok.push((await isOpen(env)) ? "🟢 Commandes ouvertes" : "🔴 Commandes fermées (/enligne pour ouvrir)");
@@ -823,7 +848,7 @@ async function onButton(cq, env) {
   const p = String(cq.data || "").split(":");
   const fromAdmin = !!env.ADMIN_CHAT_ID && String(cq.from.id) === String(env.ADMIN_CHAT_ID);
   // Boutons Prête / Annuler : toi, ou un membre du groupe des commandes
-  const orderButton = (p[0] === "ok" || p[0] === "no") && cq.message && isOrdersGroup(env, cq.message.chat.id);
+  const orderButton = (p[0] === "ok" || p[0] === "no") && cq.message && (await isOrdersGroup(env, cq.message.chat.id));
   if (!fromAdmin && !orderButton) { await answer(); return; }
   const msgRef = cq.message ? { chat_id: cq.message.chat.id, message_id: cq.message.message_id } : null;
   const appendToMessage = async (line, keep) => {
@@ -885,7 +910,7 @@ async function onButton(cq, env) {
     return;
   }
   const r = await sendToCustomer(env, "sendMessage", { chat_id: customer, text: toCustomer });
-  const by = cq.message && isOrdersGroup(env, cq.message.chat.id) && cq.from.first_name ? ` par ${cq.from.first_name}` : "";
+  const by = cq.message && (await isOrdersGroup(env, cq.message.chat.id)) && cq.from.first_name ? ` par ${cq.from.first_name}` : "";
   await appendToMessage(label + by + (r.ok ? " · client prévenu" : " · client non prévenu (il n'a pas autorisé le bot)"));
   await answer(label);
 }
