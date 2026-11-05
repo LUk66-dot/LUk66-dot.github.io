@@ -125,6 +125,7 @@ Quantités :
 
 
 
+
 <script>
 (function(){
   var map = {neon:"street-neon", jaune:"street", graffiti:"street-graff", beton:"street-clair", rouge:"street-rouge"};
@@ -695,6 +696,24 @@ const tg = window.Telegram && window.Telegram.WebApp;
 // Adresse du serveur des commandes : réglée tout en haut du fichier index.html (PS_CONFIG). Vide = mode aperçu.
 const SERVER_URL = ((window.PS_CONFIG && window.PS_CONFIG.SERVER_URL) || "").trim().replace(/\/+$/,"");
 if (tg) { tg.ready(); tg.expand(); try{ tg.setHeaderColor("#0d1424"); tg.setBackgroundColor("#0d1424"); }catch(e){} }
+
+// ===== Une seule boutique ouverte à la fois =====
+// Si le client appuie plusieurs fois sur « Commander », Telegram peut ouvrir la boutique en double.
+// Chaque nouvelle ouverture prévient les anciennes, qui se ferment toutes seules (le panier est gardé).
+(function(){
+  if (!tg || !tg.close) return;
+  const me = Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+  const closeIfOlder = other => { if (other && other !== me && other > me) { try { tg.close(); } catch (e) {} } };
+  try {
+    const bc = new BroadcastChannel("ps-boutique");
+    bc.onmessage = e => closeIfOlder(e.data);
+    bc.postMessage(me);
+  } catch (e) {}
+  try {
+    window.addEventListener("storage", e => { if (e.key === "ps-instance") closeIfOlder(e.newValue); });
+    localStorage.setItem("ps-instance", me);
+  } catch (e) {}
+})();
 
 const state = {tab:"deals", cat:"Tout", q:"", sort:"recent", favs:new Set(), cart:{}, ordered:false};
 try { JSON.parse(localStorage.getItem("bpc-favs")||"[]").forEach(id=>state.favs.add(id)); } catch(e){}
