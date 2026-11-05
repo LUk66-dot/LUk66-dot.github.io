@@ -64,14 +64,14 @@ window.PS_CONFIG = {
      ================================================ */
   PRODUITS: `
 
-Produit : Jaune
+Produit : Jaune mousseux
 Catégorie : Maison
 Photo :
 Vidéo :
 Emoji : 🍟
 Quantités :
-  2,5 grammes = 20
-  5 grammes = 40
+  2,5 grammes = 10
+  5 grammes = 20
 
 Produit : Baskets running légères
 Catégorie : Mode
@@ -117,6 +117,7 @@ Quantités :
 </script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <title>Panier de la Street</title>
+
 
 
 
@@ -698,7 +699,9 @@ if (tg) { tg.ready(); tg.expand(); try{ tg.setHeaderColor("#0d1424"); tg.setBack
 const state = {tab:"deals", cat:"Tout", q:"", sort:"recent", favs:new Set(), cart:{}, ordered:false};
 try { JSON.parse(localStorage.getItem("bpc-favs")||"[]").forEach(id=>state.favs.add(id)); } catch(e){}
 try { state.cart = JSON.parse(localStorage.getItem("bpc-cart")||"{}") || {}; } catch(e){}
-Object.keys(state.cart).forEach(id=>{ if(!DEALS.some(d=>d.id===+id)) delete state.cart[id]; }); // retire les produits supprimés
+// Panier gardé d'une visite à l'autre : on retire les produits supprimés ou renommés,
+// et les quantités qui ne sont plus proposées
+Object.keys(state.cart).forEach(id=>{ const d=DEALS.find(x=>x.id===+id); if(!d || !d.prix || d.prix[state.cart[id]] == null) delete state.cart[id]; });
 const saveFavs = () => { try { localStorage.setItem("bpc-favs", JSON.stringify([...state.favs])); } catch(e){} };
 const saveCart = () => { try { localStorage.setItem("bpc-cart", JSON.stringify(state.cart)); } catch(e){} updateBadge(); };
 const cartCount = () => Object.values(state.cart).filter(q => q > 0).length + (state.gift ? 1 : 0);   // nombre d'articles différents
@@ -706,7 +709,16 @@ function updateBadge(){ const b=document.querySelector("#badge"); const n=cartCo
 
 const $ = s => document.querySelector(s);
 const eur = n => n.toLocaleString("fr-FR",{style:"currency",currency:"EUR"});
-const priceFor = (d, q=1) => (d.prix && d.prix[q] != null) ? d.prix[q] : d.prix[1]*q;
+// Quantités proposées pour un produit (triées) et prix pour une quantité donnée
+const qtyKeys = d => Object.keys((d && d.prix) || {}).map(Number).filter(n => Number.isFinite(n) && n > 0).sort((a,b) => a - b);
+const minQty = d => qtyKeys(d)[0] || 1;
+const priceFor = (d, q) => {
+  if (!d || !d.prix) return 0;
+  if (q == null) q = minQty(d);
+  if (Number.isFinite(d.prix[q])) return d.prix[q];
+  const m = minQty(d), base = d.prix[m];              // quantité absente : prix proportionnel à la plus petite
+  return Number.isFinite(base) ? Math.round(base / m * q * 100) / 100 : 0;
+};
 
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),1800); }
 function haptic(){ try{ tg && tg.HapticFeedback.impactOccurred("light"); }catch(e){} }
@@ -750,7 +762,7 @@ function dealCard(d){
       <h3 class="name">${d.name}</h3>
       <div class="qtyline${state.qtyErr===d.id ? " bad" : ""}">${presets(d.id, true)}</div>
       ${state.qtyErr===d.id ? `<p class="err" role="alert">Merci de bien vouloir choisir une quantité</p>` : ""}
-      <div class="row bottom"><span class="now">${eur(priceFor(d, (state.pick[d.id] ?? state.cart[d.id]) || 1))}</span>${addBtn(d.id)}</div>
+      <div class="row bottom"><span class="now">${eur(priceFor(d, (state.pick[d.id] ?? state.cart[d.id]) || minQty(d)))}</span>${addBtn(d.id)}</div>
     </div>
     <button class="vid${d.video ? " has" : ""}" data-video="${d.id}" aria-label="Voir la vidéo du produit"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg></button>
     <button class="fav" data-fav="${d.id}" aria-pressed="${state.favs.has(d.id)}" aria-label="Ajouter aux favoris">♥</button>
