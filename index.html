@@ -12,10 +12,13 @@ window.PS_CONFIG = {
   // Adresse de ton serveur Cloudflare (entre les guillemets)
   SERVER_URL: "https://panier-street.luk114063.workers.dev",
 
-  // Thème par défaut : "neon", "braise", "graffiti" ou "jaune"
+  // Thème par défaut : "neon", "braise", "graffiti", "givre" ou "jaune"
   THEME: "neon",
   // Laisser les clients changer de thème avec le rond en haut à droite : true ou false
   THEME_PICKER: true,
+
+  // Smileys qui flottent pendant l'animation de lancement (séparés par un espace)
+  INTRO_SMILEYS: "❄️🌿🧈🍬🍫",
 
   // Retrait sur place : adresse, horaires (heures pleines) et temps de préparation
   PICKUP_ADDRESS: "4 Rue des 4 buissons, 38230 Tignieu-Jameyzieu",
@@ -121,9 +124,11 @@ Quantités :
 
 
 
+
+
 <script>
 (function(){
-  var map = {neon:"street-neon", braise:"street-rouge", rouge:"street-rouge", graffiti:"street-graff", jaune:"street"};
+  var map = {neon:"street-neon", braise:"street-rouge", rouge:"street-rouge", graffiti:"street-graff", givre:"street-givre", hiver:"street-givre", jaune:"street"};
   var c = window.PS_CONFIG || {}, pick = map[String(c.THEME || "neon").toLowerCase()] || "street-neon";
   try { var saved = localStorage.getItem("ps-theme"); if (c.THEME_PICKER !== false && saved && Object.values(map).indexOf(saved) > -1) pick = saved; } catch(e){}
   document.documentElement.setAttribute("data-style", pick);
@@ -429,7 +434,7 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var
 .thememenu button b{margin-left:auto;color:var(--tag)}
 .thememenu i{width:20px;height:20px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(127,127,127,.4)}
 /* ===== Animations de lancement par thème ===== */
-.i-tape,.i-splats,.i-bars{display:none;position:absolute;inset:0;pointer-events:none}
+.i-tape,.i-splats,.i-bars,.i-snow,.i-frost{display:none;position:absolute;inset:0;pointer-events:none}
 /* Jaune : rubans de chantier + lettres qui tombent */
 :root[data-style="street"] .i-grid,:root[data-style="street"] .i-scan,:root[data-style="street"] .i-sparks{display:none}
 :root[data-style="street"] .i-sky{background:radial-gradient(60% 45% at 50% 55%,rgba(255,212,0,.16),transparent 70%)}
@@ -557,6 +562,46 @@ nav.tabs .tab[aria-selected="true"] b{filter:drop-shadow(0 0 6px var(--glow))}
 @media (prefers-reduced-motion:reduce){
   .feed.enter > .card{animation:none!important}
 }
+/* ===== GIVRE : nuit d'hiver, bleu glacé, neige qui tombe ===== */
+:root[data-style="street-givre"]{
+  --bg:#0a1020; --surface:rgba(22,34,60,.78); --ink:#eef6ff; --muted:#9fb4d1; --line:#26385a; --chip:#16233f;
+  --tag:#9fdcff; --tag-ink:#06111f; --hot:#ffffff; --ok:#7fe8c8; --danger:#ff7a8a; --danger-bg:#3a1e2a;
+  --display:"Oswald", "Arial Narrow", sans-serif; --body:"Archivo", system-ui, sans-serif;
+  --grad:linear-gradient(90deg,#9fdcff,#ffffff,#6fb6ff,#9fdcff); --glow:rgba(159,220,255,.5); color-scheme:dark}
+:root[data-style="street-givre"] body{background:radial-gradient(80% 50% at 50% -10%,rgba(111,182,255,.22),transparent 70%),radial-gradient(60% 40% at 100% 100%,rgba(159,220,255,.08),transparent 70%),var(--bg);background-attachment:fixed}
+:root[data-style="street-givre"] body::after{content:"";position:fixed;inset:-20px 0 0;pointer-events:none;z-index:-1;opacity:.55;
+  background-image:radial-gradient(1.6px 1.6px at 20px 30px,#fff 98%,transparent),radial-gradient(1.2px 1.2px at 110px 80px,#fff 98%,transparent),radial-gradient(2px 2px at 60px 150px,#fff 98%,transparent),radial-gradient(1.3px 1.3px at 160px 190px,#fff 98%,transparent),
+    radial-gradient(1px 1px at 40px 60px,#cfe9ff 98%,transparent),radial-gradient(1.4px 1.4px at 130px 20px,#cfe9ff 98%,transparent),radial-gradient(1px 1px at 90px 120px,#cfe9ff 98%,transparent);
+  background-size:200px 220px,200px 220px,200px 220px,200px 220px,140px 160px,140px 160px,140px 160px;animation:snowFall 18s linear infinite}
+@keyframes snowFall{to{background-position:30px 220px,30px 220px,30px 220px,30px 220px,-20px 160px,-20px 160px,-20px 160px}}
+:root[data-style="street-givre"] .logo .lt{text-transform:uppercase;letter-spacing:.08em;filter:drop-shadow(0 0 8px rgba(159,220,255,.6))}
+:root[data-style="street-givre"] .card{-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-color:rgba(159,220,255,.22);border-radius:10px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 10px 24px -16px rgba(111,182,255,.7)}
+:root[data-style="street-givre"] .card::before{content:"";position:absolute;left:10px;right:10px;top:-1px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),transparent);pointer-events:none}
+:root[data-style="street-givre"] .thumb{border-radius:8px;background:linear-gradient(160deg,#1c2c4d,#0f1a30)}
+:root[data-style="street-givre"] .now{font-family:var(--display);font-weight:700;color:#cfeeff}
+:root[data-style="street-givre"] .addbtn,:root[data-style="street-givre"] .btn.big{background:linear-gradient(135deg,#ffffff,#9fdcff 55%,#6fb6ff);color:#06111f;border-radius:8px;font-weight:700;box-shadow:0 0 16px -4px rgba(159,220,255,.8)}
+:root[data-style="street-givre"] .chip{border-radius:8px}
+:root[data-style="street-givre"] .chip[aria-pressed="true"]{background:#9fdcff;color:#06111f}
+:root[data-style="street-givre"] .qtysel,:root[data-style="street-givre"] .btn{border-radius:8px}
+/* Lancement Givre : neige, bords qui gèlent, titre qui se fige */
+:root[data-style="street-givre"] .i-grid,:root[data-style="street-givre"] .i-scan,:root[data-style="street-givre"] .i-sparks{display:none}
+:root[data-style="street-givre"] .i-sky{background:radial-gradient(70% 45% at 50% 0%,rgba(111,182,255,.28),transparent 70%),radial-gradient(45% 30% at 50% 50%,rgba(159,220,255,.12),transparent 70%)}
+:root[data-style="street-givre"] .i-floats span{filter:grayscale(.3) brightness(1.2)}
+:root[data-style="street-givre"] .i-snow{display:block}
+:root[data-style="street-givre"] .i-snow b{position:absolute;top:-10px;width:var(--s);height:var(--s);border-radius:50%;background:#fff;opacity:var(--o);box-shadow:0 0 6px rgba(255,255,255,.8);
+  animation:flake var(--d) linear var(--dl) infinite}
+@keyframes flake{to{transform:translate(var(--x),110vh)}}
+:root[data-style="street-givre"] .i-frost{display:block;opacity:0;animation:frostIn 2.2s ease-out .2s forwards;
+  background:radial-gradient(120% 90% at 50% 50%,transparent 55%,rgba(200,235,255,.22) 80%,rgba(230,246,255,.45) 100%)}
+@keyframes frostIn{to{opacity:1}}
+:root[data-style="street-givre"] .i-logo path,:root[data-style="street-givre"] .i-logo circle{stroke:#cfeeff}
+:root[data-style="street-givre"] .i-logo svg{filter:drop-shadow(0 0 10px rgba(159,220,255,.8))}
+:root[data-style="street-givre"] .i-title{color:#eef6ff;text-transform:uppercase;letter-spacing:.08em;text-shadow:0 0 18px rgba(159,220,255,.6)}
+:root[data-style="street-givre"] .i-title span{opacity:0;animation:freeze .9s ease-out var(--t) both}
+:root[data-style="street-givre"] .i-title span.hl{color:#9fdcff}
+@keyframes freeze{0%{opacity:0;filter:blur(10px);transform:translateY(-12px);color:#6fb6ff}60%{opacity:1;filter:blur(1px);text-shadow:0 0 30px #fff}100%{opacity:1;filter:none;transform:none}}
+@media (prefers-reduced-motion:reduce){:root[data-style="street-givre"] body::after,.i-snow b{animation:none!important}}
 /* Effets de survol seulement sur ordinateur (sur iPhone, ils gênaient le menu Quantité) */
 @media (hover:hover) and (pointer:fine){
 .card:hover{transform:translateY(-2px);border-color:var(--tag);box-shadow:0 8px 24px -10px var(--glow)}
@@ -570,9 +615,11 @@ nav.tabs .tab[aria-selected="true"] b{filter:drop-shadow(0 0 6px var(--glow))}
 <div class="intro" id="splash" role="status" aria-label="Bienvenue sur Panier de la Street">
   <div class="i-sky" aria-hidden="true"></div>
   <div class="i-grid" aria-hidden="true"></div>
-  <div class="i-floats" aria-hidden="true"><span style="left:43%;--d:7.5s;--dl:-3.1s;font-size:1.61rem">👟</span><span style="left:48%;--d:7.0s;--dl:-2.7s;font-size:1.32rem">👕</span><span style="left:92%;--d:8.0s;--dl:-5.0s;font-size:1.67rem">👗</span><span style="left:32%;--d:5.7s;--dl:-1.7s;font-size:1.16rem">👜</span><span style="left:71%;--d:6.2s;--dl:-5.1s;font-size:1.41rem">🧢</span><span style="left:88%;--d:7.5s;--dl:-0.0s;font-size:1.27rem">🕶️</span><span style="left:84%;--d:6.4s;--dl:-5.9s;font-size:1.42rem">👠</span><span style="left:10%;--d:6.9s;--dl:-4.7s;font-size:1.32rem">🧥</span><span style="left:12%;--d:6.0s;--dl:-5.8s;font-size:1.71rem">👖</span><span style="left:14%;--d:5.7s;--dl:-0.6s;font-size:1.15rem">🧣</span><span style="left:74%;--d:5.5s;--dl:-3.4s;font-size:1.46rem">👟</span><span style="left:21%;--d:7.2s;--dl:-0.8s;font-size:1.61rem">👕</span><span style="left:14%;--d:6.3s;--dl:-1.3s;font-size:1.32rem">👗</span><span style="left:89%;--d:7.4s;--dl:-1.8s;font-size:1.81rem">👜</span></div>
+  <div class="i-floats" aria-hidden="true"><span style="left:43%;--d:7.5s;--dl:-3.1s;font-size:1.61rem">👟</span><span style="left:48%;--d:7.0s;--dl:-2.7s;font-size:1.32rem">👕</span><span style="left:92%;--d:8.0s;--dl:-5.0s;font-size:1.67rem">👗</span><span style="left:32%;--d:5.7s;--dl:-1.7s;font-size:1.16rem">👜</span><span style="left:71%;--d:6.2s;--dl:-5.1s;font-size:1.41rem">🧢</span><span style="left:88%;--d:7.5s;--dl:-0.0s;font-size:1.27rem">🕶️</span><span style="left:84%;--d:6.4s;--dl:-5.9s;font-size:1.42rem">👠</span><span style="left:10%;--d:6.9s;--dl:-4.7s;font-size:1.32rem">🧥</span><span style="left:12%;--d:6.0s;--dl:-5.8s;font-size:1.71rem">👖</span><span style="left:14%;--d:5.7s;--dl:-0.6s;font-size:1.15rem">🧣</span><span style="left:74%;--d:5.5s;--dl:-3.4s;font-size:1.46rem">👟</span><span style="left:21%;--d:7.2s;--dl:-0.8s;font-size:1.61rem">👕</span><span style="left:14%;--d:6.3s;--dl:-1.3s;font-size:1.32rem">👗</span><span style="left:89%;--d:7.4s;--dl:-1.8s;font-size:1.81rem">👜</span></div><script>(function(){var c=window.PS_CONFIG||{},l=String(c.INTRO_SMILEYS||"").trim().split(/\s+/).filter(Boolean);if(!l.length)return;var sp=document.currentScript.previousElementSibling.querySelectorAll("span");for(var k=0;k<sp.length;k++)sp[k].textContent=l[k%l.length];})();</script>
   <div class="i-scan" aria-hidden="true"></div>
   <div class="i-tape" aria-hidden="true"><i></i><i></i></div>
+  <div class="i-snow" aria-hidden="true"><b style="left:32%;--s:2.8px;--d:7.3s;--dl:-0.7s;--x:3px;--o:0.55"></b><b style="left:6%;--s:4.5px;--d:4.2s;--dl:-3.9s;--x:-34px;--o:0.40"></b><b style="left:42%;--s:6.1px;--d:4.6s;--dl:-2.0s;--x:10px;--o:0.87"></b><b style="left:58%;--s:4.0px;--d:8.9s;--dl:-0.4s;--x:29px;--o:0.51"></b><b style="left:14%;--s:2.6px;--d:5.5s;--dl:-7.3s;--x:-26px;--o:0.67"></b><b style="left:64%;--s:3.9px;--d:6.7s;--dl:-0.6s;--x:-35px;--o:0.46"></b><b style="left:68%;--s:4.1px;--d:5.6s;--dl:-5.3s;--x:-4px;--o:0.51"></b><b style="left:79%;--s:5.5px;--d:5.2s;--dl:-5.2s;--x:2px;--o:0.83"></b><b style="left:73%;--s:3.4px;--d:8.9s;--dl:-1.1s;--x:-7px;--o:0.77"></b><b style="left:15%;--s:4.4px;--d:4.2s;--dl:-6.0s;--x:21px;--o:0.67"></b><b style="left:88%;--s:3.6px;--d:7.5s;--dl:-5.3s;--x:6px;--o:0.60"></b><b style="left:84%;--s:6.7px;--d:6.4s;--dl:-6.0s;--x:-35px;--o:0.74"></b><b style="left:65%;--s:7.0px;--d:8.1s;--dl:-2.6s;--x:-9px;--o:0.72"></b><b style="left:2%;--s:4.3px;--d:4.8s;--dl:-1.1s;--x:-35px;--o:0.77"></b><b style="left:13%;--s:3.2px;--d:6.0s;--dl:-7.8s;--x:-34px;--o:0.60"></b><b style="left:55%;--s:6.4px;--d:8.1s;--dl:-7.8s;--x:-18px;--o:0.58"></b><b style="left:36%;--s:6.4px;--d:8.8s;--dl:-1.4s;--x:-26px;--o:0.48"></b><b style="left:23%;--s:4.4px;--d:6.9s;--dl:-2.4s;--x:-40px;--o:0.58"></b><b style="left:37%;--s:4.8px;--d:8.8s;--dl:-6.2s;--x:1px;--o:0.69"></b><b style="left:68%;--s:2.3px;--d:8.5s;--dl:-7.0s;--x:30px;--o:0.79"></b><b style="left:39%;--s:4.0px;--d:4.5s;--dl:-5.7s;--x:-35px;--o:0.39"></b><b style="left:21%;--s:2.8px;--d:5.7s;--dl:-0.5s;--x:-40px;--o:0.43"></b><b style="left:10%;--s:3.8px;--d:4.1s;--dl:-7.9s;--x:9px;--o:0.43"></b><b style="left:25%;--s:3.7px;--d:5.8s;--dl:-1.1s;--x:28px;--o:0.90"></b><b style="left:47%;--s:4.4px;--d:4.4s;--dl:-0.9s;--x:-13px;--o:0.50"></b><b style="left:83%;--s:2.8px;--d:4.1s;--dl:-8.6s;--x:2px;--o:0.43"></b><b style="left:54%;--s:2.1px;--d:6.6s;--dl:-8.8s;--x:29px;--o:0.73"></b><b style="left:26%;--s:3.8px;--d:4.8s;--dl:-6.9s;--x:3px;--o:0.78"></b><b style="left:33%;--s:3.1px;--d:8.1s;--dl:-8.9s;--x:28px;--o:0.79"></b><b style="left:82%;--s:5.7px;--d:5.1s;--dl:-4.7s;--x:-12px;--o:0.37"></b><b style="left:3%;--s:3.4px;--d:5.3s;--dl:-6.2s;--x:37px;--o:0.60"></b><b style="left:94%;--s:6.9px;--d:8.8s;--dl:-3.3s;--x:-22px;--o:0.47"></b><b style="left:20%;--s:3.0px;--d:7.1s;--dl:-8.1s;--x:27px;--o:0.61"></b><b style="left:65%;--s:6.0px;--d:4.4s;--dl:-5.9s;--x:33px;--o:0.78"></b><b style="left:75%;--s:4.4px;--d:4.9s;--dl:-7.1s;--x:-13px;--o:0.79"></b><b style="left:97%;--s:4.0px;--d:6.0s;--dl:-8.5s;--x:18px;--o:0.44"></b><b style="left:13%;--s:2.8px;--d:8.5s;--dl:-7.3s;--x:-28px;--o:0.80"></b><b style="left:98%;--s:5.3px;--d:5.8s;--dl:-4.9s;--x:-30px;--o:0.36"></b><b style="left:97%;--s:5.2px;--d:6.6s;--dl:-8.4s;--x:-5px;--o:0.83"></b><b style="left:83%;--s:3.1px;--d:5.3s;--dl:-2.6s;--x:-21px;--o:0.67"></b><b style="left:26%;--s:4.1px;--d:4.7s;--dl:-8.2s;--x:-12px;--o:0.60"></b><b style="left:58%;--s:6.5px;--d:6.1s;--dl:-8.3s;--x:0px;--o:0.64"></b></div>
+  <div class="i-frost" aria-hidden="true"></div>
   <div class="i-splats" aria-hidden="true"><b style="left:84%;top:40%;--s:105px;--c:var(--tag);--dl:0.20s"></b><b style="left:72%;top:11%;--s:119px;--c:var(--hot);--dl:0.38s"></b><b style="left:36%;top:14%;--s:80px;--c:#7cf0ff;--dl:0.56s"></b><b style="left:19%;top:55%;--s:120px;--c:var(--tag);--dl:0.74s"></b><b style="left:36%;top:56%;--s:129px;--c:var(--hot);--dl:0.92s"></b><b style="left:18%;top:39%;--s:61px;--c:#ffffff;--dl:1.10s"></b><b style="left:32%;top:60%;--s:95px;--c:var(--tag);--dl:1.28s"></b></div>
   <div class="i-bars" aria-hidden="true"><i></i><i></i></div>
   <div class="i-center">
@@ -1396,6 +1443,7 @@ const THEMES = [
   {key:"street-neon",  name:"Néon",     a:"#29e0ff", b:"#0d1424"},
   {key:"street-rouge", name:"Braise",   a:"linear-gradient(135deg,#ff3b1f,#ff8a00,#ffd23f)", b:"#120707"},
   {key:"street-graff", name:"Graffiti", a:"linear-gradient(135deg,#ff3fa4,#7cf0ff)", b:"#18161c"},
+  {key:"street-givre", name:"Givre", a:"linear-gradient(135deg,#ffffff,#9fdcff 45%,#3d7bd9)", b:"#0a1020"},
   {key:"street",       name:"Jaune",    a:"#ffd400", b:"#1c1d20"},
 ];
 const swatch = t => t.a.includes("gradient") ? `conic-gradient(from 0deg, ${t.b} 0 50%, transparent 0), ${t.a}` : `conic-gradient(${t.a} 0 50%, ${t.b} 0)`;
